@@ -3,6 +3,7 @@ package com.invigilo.hall;
 import com.invigilo.audit.AuditService;
 import com.invigilo.common.error.ApiException;
 import com.invigilo.common.persistence.Codes;
+import com.invigilo.common.persistence.UpsertResult;
 import com.invigilo.common.persistence.UsageCheck;
 import com.invigilo.common.persistence.Versions;
 import java.util.List;
@@ -70,8 +71,24 @@ public class HallService {
         hall.update(input);
         repository.flush();
         HallView after = HallView.of(hall);
-        audit.record("HALL_UPDATED", "hall", id, before, after, null);
+        if (after.version() != before.version()) { // nothing changed: no audit noise
+            audit.record("HALL_UPDATED", "hall", id, before, after, null);
+        }
         return after;
+    }
+
+    /** Create or update by code, for CSV import. */
+    @Transactional
+    public UpsertResult upsert(HallInput input) {
+        var existing = repository.findByCode(Codes.normalize(input.code()));
+        if (existing.isEmpty()) {
+            create(input);
+            return UpsertResult.CREATED;
+        }
+        Hall h = existing.get();
+        long before = h.getVersion();
+        HallView after = update(h.getId(), input, h.getVersion());
+        return after.version() == before ? UpsertResult.UNCHANGED : UpsertResult.UPDATED;
     }
 
     @Transactional

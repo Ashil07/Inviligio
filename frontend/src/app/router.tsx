@@ -1,11 +1,15 @@
 import { createBrowserRouter, type RouteObject } from 'react-router'
 import { NotFoundPage } from '@/components/NotFoundPage'
 import { HomeRedirect, PublicOnly, RequireAuth, RequireRole } from '@/features/auth/guards'
+import { AcceptInvitePage } from '@/features/auth/AcceptInvitePage'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { RegisterCollegePage } from '@/features/auth/RegisterCollegePage'
 import { CollegeSettingsPage } from '@/features/college/CollegeSettingsPage'
 import { DepartmentsPage } from '@/features/departments/DepartmentsPage'
+import { FacultyDetailPage } from '@/features/faculty/FacultyDetailPage'
+import { FacultyListPage } from '@/features/faculty/FacultyListPage'
 import { HallsPage } from '@/features/halls/HallsPage'
+import { ImportPage } from '@/features/importer/ImportPage'
 import { OnboardingWizard } from '@/features/onboarding/OnboardingWizard'
 import { PolicySettingsPage, PolicyVersionPage } from '@/features/policy/PolicySettingsPage'
 import { SubjectsPage } from '@/features/subjects/SubjectsPage'
@@ -20,6 +24,7 @@ import { AdminHomePage, FacultyHomePage, HodHomePage } from './RoleHomePages'
  */
 export const routes: RouteObject[] = [
   { path: '/status', element: <SystemStatusPage /> },
+  { path: '/accept-invite', element: <AcceptInvitePage /> },
   {
     element: <PublicOnly />,
     children: [
@@ -48,6 +53,9 @@ export const routes: RouteObject[] = [
                       { path: '/admin/departments', element: <DepartmentsPage /> },
                       { path: '/admin/subjects', element: <SubjectsPage /> },
                       { path: '/admin/halls', element: <HallsPage /> },
+                      { path: '/admin/faculty', element: <FacultyListPage /> },
+                      { path: '/admin/faculty/:id', element: <FacultyDetailPage /> },
+                      { path: '/admin/import', element: <ImportPage /> },
                       { path: '/admin/settings/college', element: <CollegeSettingsPage /> },
                       { path: '/admin/settings/policy', element: <PolicySettingsPage /> },
                       { path: '/admin/settings/policy/versions/:version', element: <PolicyVersionPage /> },

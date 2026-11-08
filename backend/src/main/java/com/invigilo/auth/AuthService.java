@@ -1,5 +1,6 @@
 package com.invigilo.auth;
 
+import com.invigilo.access.AccessService;
 import com.invigilo.auth.AuthDtos.CollegeOption;
 import com.invigilo.auth.AuthDtos.IssuedSession;
 import com.invigilo.auth.AuthDtos.LoginRequest;
@@ -46,13 +47,14 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final TokenService tokens;
     private final RefreshTokenService refreshTokens;
+    private final AccessService access;
     private final Clock clock;
     /** Compared against when the email is unknown, so response time does not reveal which emails exist. */
     private final String dummyHash;
 
     public AuthService(SystemTransactions system, CollegeRepository colleges, AppUserRepository users,
                        CollegeMembershipRepository memberships, PasswordEncoder passwordEncoder,
-                       TokenService tokens, RefreshTokenService refreshTokens, Clock clock) {
+                       TokenService tokens, RefreshTokenService refreshTokens, AccessService access, Clock clock) {
         this.system = system;
         this.colleges = colleges;
         this.users = users;
@@ -60,6 +62,7 @@ public class AuthService {
         this.passwordEncoder = passwordEncoder;
         this.tokens = tokens;
         this.refreshTokens = refreshTokens;
+        this.access = access;
         this.clock = clock;
         this.dummyHash = passwordEncoder.encode("invigilo-timing-equalizer");
     }
@@ -141,6 +144,38 @@ public class AuthService {
         });
         return issued.orElseThrow(() ->
                 ApiException.unauthorized("INVALID_REFRESH_TOKEN", "Session expired. Please sign in again."));
+    }
+
+    /** Public: shows an invitee what they are accepting. Never reveals anything without the token. */
+    public AccessService.InvitationPreview previewInvitation(String rawToken) {
+        return system.execute(() -> access.preview(rawToken));
+    }
+
+    /**
+     * Accepts an invitation and signs the invitee in. With an existing account (same email) the
+     * invitee proves ownership with that account's password; otherwise {@code password} becomes
+     * the new account's password.
+     */
+    public IssuedSession acceptInvitation(String rawToken, String password, String fullName) {
+        AccessService.InvitationPreview preview = previewInvitation(rawToken);
+        String newUserHash = null;
+        if (preview.existingAccount()) {
+            if (!passwordEncoder.matches(password, preview.existingPasswordHash())) {
+                throw ApiException.unauthorized("INVALID_CREDENTIALS",
+                        "An account for " + preview.email() + " already exists. Enter its current password.");
+            }
+        } else {
+            if (password.length() < 8) {
+                throw ApiException.unprocessable("WEAK_PASSWORD", "Choose a password of at least 8 characters");
+            }
+            newUserHash = passwordEncoder.encode(password);
+        }
+        String hash = newUserHash;
+        return system.execute(() -> {
+            CollegeMembership m = access.accept(rawToken, hash, fullName);
+            m.getUser().recordLogin(clock.instant());
+            return issue(m, refreshTokens.create(m));
+        });
     }
 
     public void logout(String rawRefreshToken) {

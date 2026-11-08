@@ -28,6 +28,8 @@ swaps or substitutes. Current state and next milestone: `docs/HANDOVER.md`, `doc
 - Editable records: views carry `version`, updates call `Versions.requireUnchanged`. Deleting a referenced
   row is refused via `UsageCheck<T>` beans; register one when a new table references another.
 - Child tables use composite FKs `(college_id, parent_id) → parent (college_id, id)`.
+- Link tables are entities extending `TenantScopedEntity` (they need `college_id`), not `@ManyToMany`.
+- Bulk changes go through `importer/` (validate everything, then apply in one transaction via services).
 - Policy rules: change `PolicySettings` and `features/policy/schema.ts` together, plus a backfill migration.
 - Frontend: server data through TanStack Query hooks in `features/<x>/api.ts`; forms with React Hook
   Form + Zod; no fake/mock-only buttons in app code.

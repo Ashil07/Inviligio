@@ -17,6 +17,8 @@ interface SubjectRepository extends JpaRepository<Subject, UUID>, JpaSpecificati
 
     boolean existsByCode(String code);
 
+    java.util.Optional<Subject> findByCode(String code);
+
     boolean existsByCodeAndIdNot(String code, UUID id);
 
     long countByDepartmentId(UUID departmentId);

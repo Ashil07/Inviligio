@@ -1,16 +1,11 @@
 package com.invigilo.auth;
 
+import com.invigilo.common.security.Tokens;
 import com.invigilo.config.SecurityProperties;
 import com.invigilo.identity.CollegeMembership;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Base64;
-import java.util.HexFormat;
 import org.springframework.stereotype.Component;
 
 /**
@@ -32,7 +27,6 @@ class RefreshTokenService {
     private final RefreshTokenRepository repository;
     private final SecurityProperties properties;
     private final Clock clock;
-    private final SecureRandom random = new SecureRandom();
 
     RefreshTokenService(RefreshTokenRepository repository, SecurityProperties properties, Clock clock) {
         this.repository = repository;
@@ -78,17 +72,10 @@ class RefreshTokenService {
     }
 
     private String newRawToken() {
-        byte[] bytes = new byte[32];
-        random.nextBytes(bytes);
-        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+        return Tokens.newToken();
     }
 
     static String hash(String raw) {
-        try {
-            byte[] digest = MessageDigest.getInstance("SHA-256").digest(raw.getBytes(StandardCharsets.UTF_8));
-            return HexFormat.of().formatHex(digest);
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("SHA-256 not available", e);
-        }
+        return Tokens.sha256Hex(raw);
     }
 }

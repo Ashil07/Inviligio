@@ -36,6 +36,10 @@ public class CollegeMembership extends TenantScopedEntity {
     @Column(nullable = false)
     private Status status = Status.ACTIVE;
 
+    /** The faculty record this login belongs to, if any (set when a faculty invitation is accepted). */
+    @Column(name = "faculty_id")
+    private java.util.UUID facultyId;
+
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "college_membership_role", joinColumns = @JoinColumn(name = "membership_id"))
     @Enumerated(EnumType.STRING)
@@ -56,6 +60,23 @@ public class CollegeMembership extends TenantScopedEntity {
 
     public boolean isActive() {
         return status == Status.ACTIVE;
+    }
+
+    /** Links this login to a faculty record and grants {@code roles} in addition to existing ones. */
+    public void linkFaculty(java.util.UUID facultyId, Set<Role> roles) {
+        this.facultyId = facultyId;
+        this.roles.addAll(roles);
+    }
+
+    /** Replaces roles and status (exam-cell access management). */
+    public void updateAccess(Set<Role> roles, boolean active) {
+        this.roles.clear();
+        this.roles.addAll(roles);
+        this.status = active ? Status.ACTIVE : Status.DISABLED;
+    }
+
+    public java.util.UUID getFacultyId() {
+        return facultyId;
     }
 
     public AppUser getUser() {

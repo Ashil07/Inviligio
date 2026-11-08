@@ -42,16 +42,28 @@ public final class AuthDtos {
         }
     }
 
-    public record SessionInfo(UserInfo user, CollegeInfo college, UUID membershipId, List<Role> roles) {
+    /** {@code facultyId} is set when this login belongs to a faculty record. */
+    public record SessionInfo(UserInfo user, CollegeInfo college, UUID membershipId, UUID facultyId, List<Role> roles) {
         static SessionInfo from(CollegeMembership m) {
             var u = m.getUser();
             return new SessionInfo(
                     new UserInfo(u.getId(), u.getEmail(), u.getFullName()),
                     CollegeInfo.from(m.getCollege()),
                     m.getId(),
+                    m.getFacultyId(),
                     m.getRoles().stream().sorted().toList());
         }
     }
+
+    public record InvitationTokenRequest(@NotBlank @Size(max = 200) String token) {}
+
+    public record AcceptInvitationRequest(
+            @NotBlank @Size(max = 200) String token,
+            @NotBlank @Size(max = 72) String password,
+            @Size(max = 200) String fullName) {}
+
+    public record InvitationPreviewResponse(String collegeName, String collegeCode, String facultyName, String email,
+                                            List<Role> roles, Instant expiresAt, boolean existingAccount) {}
 
     public record AuthResponse(String accessToken, String tokenType, Instant expiresAt, SessionInfo session) {
         static AuthResponse from(IssuedSession issued) {

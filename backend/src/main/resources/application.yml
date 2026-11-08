@@ -43,6 +43,12 @@ spring:
     problemdetails:
       enabled: true
 
+  servlet:
+    multipart:
+      # CSV imports: a few thousand rows fit comfortably.
+      max-file-size: 2MB
+      max-request-size: 3MB
+
 server:
   port: ${PORT:8080}
 

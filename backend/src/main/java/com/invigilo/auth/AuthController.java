@@ -91,6 +91,21 @@ public class AuthController {
         return ResponseEntity.noContent().header(HttpHeaders.SET_COOKIE, clearedCookie().toString()).build();
     }
 
+    @PostMapping("/invitations/preview")
+    public AuthDtos.InvitationPreviewResponse previewInvitation(@Valid @RequestBody AuthDtos.InvitationTokenRequest request) {
+        var p = auth.previewInvitation(request.token());
+        return new AuthDtos.InvitationPreviewResponse(p.collegeName(), p.collegeCode(), p.facultyName(), p.email(),
+                p.roles(), p.expiresAt(), p.existingAccount());
+    }
+
+    @PostMapping("/invitations/accept")
+    public ResponseEntity<AuthResponse> acceptInvitation(@Valid @RequestBody AuthDtos.AcceptInvitationRequest request) {
+        IssuedSession issued = auth.acceptInvitation(request.token(), request.password(), request.fullName());
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, refreshCookie(issued.refreshToken()).toString())
+                .body(AuthResponse.from(issued));
+    }
+
     @GetMapping("/me")
     public SessionInfo me() {
         return auth.currentSession(CurrentUser.require());

@@ -13,5 +13,7 @@ interface HallRepository extends JpaRepository<Hall, UUID> {
 
     boolean existsByCode(String code);
 
+    java.util.Optional<Hall> findByCode(String code);
+
     boolean existsByCodeAndIdNot(String code, UUID id);
 }

@@ -10,6 +10,7 @@ export function makeSession(roles: Role[] = ['EXAM_CELL_ADMIN'], overrides: Part
     user: { id: 'u1', email: 'admin@example.test', fullName: 'Asha Admin' },
     college: { id: 'c1', code: 'GEC', name: 'Government Engineering College', status: 'ONBOARDING' },
     membershipId: 'm1',
+    facultyId: null,
     roles,
     ...overrides,
   }

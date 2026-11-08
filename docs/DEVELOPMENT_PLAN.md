@@ -41,7 +41,7 @@ merged. If two branches race for the same number, the later one renumbers before
 | M1 | Auth & tenancy | **Done.** `college`, `app_user`, `college_membership`, `refresh_token` migrations; register-college/login/refresh/logout/`me`; `TenantContext` + `@TenantId` base entity; tenant-isolation test harness. FE: login (with college picker), college registration, in-memory session, Axios 401→refresh→retry, role areas and guards. |
 | M2 | College onboarding & policy | **Done.** Institution profile on `college`; versioned `college_policy` (`PolicySettings`, HARD/SOFT/OFF modes); `audit_log`; onboarding wizard (institution → faculty rules → workload → staffing → availability → swaps → review); college and policy settings pages with version history. |
 | M3 | Departments, subjects, halls | **Done.** CRUD with codes unique per college, composite tenant FK subject→department, delete only when unused (`UsageCheck`), deactivate otherwise, stale-edit protection, audit; admin pages with search/paging for subjects. |
-| M4 | Faculty | CRUD, department, designation, employment type, seniority, chief eligibility, duty weight, subjects taught, restrictions, invite to create login. **Recommended:** CSV import for faculty, subjects and halls (real colleges have hundreds of rows); M3 deliberately left bulk import to this milestone so all three share one importer. |
+| M4 | Faculty, access, import | **Done.** Faculty CRUD (department, designation, employment type, joined-on seniority, chief eligibility, duty weight, subjects taught), per-person restrictions, login invitations with role management, CSV import (dry run + all-or-nothing apply) for departments, subjects, halls and faculty. |
 | M5 | Exam scheduling | Periods, sessions (date + time range), exams, session halls, seating; capacity and consistency validation; computed required invigilators with override. |
 | M6 | Availability | Faculty submit leave/unavailability (day or session); approval per policy (HOD or auto); admin view per period. |
 | M7 | Allocation engine | Per ALLOCATION_ENGINE.md: pure-Java engine, constraints, solver, repair, final validation, unit tests incl. determinism and scale; `AllocationService` persisting run + DRAFT chart + unfilled positions. |
@@ -52,6 +52,24 @@ merged. If two branches race for the same number, the later one renumbers before
 builds and verifies everything against embedded PostgreSQL in tests; nothing requires Supabase or a
 local database server. Developer 2 connects Supabase (ARCHITECTURE.md §10) as the first step of M18,
 or earlier when a running instance is needed for manual testing.
+
+## When Developer 2 starts
+
+Developer 2 starts **after H1**, not before: M9-M17 build on the duty chart, allocation runs and
+explanations that M7-M8 create, and the two developers work sequentially on one codebase.
+Start Developer 2 when all of these are true:
+
+1. M5-M8 are done: periods/sessions/halls can be scheduled, availability exists, "Generate"
+   produces a DRAFT chart with unfilled positions explained, and the review grid shows it.
+2. `docs/HANDOVER.md` "Developer 1 → Developer 2" is filled in (endpoints, latest migration,
+   implemented policy rules, engine status and measured performance, known issues).
+3. A demo seed (one college with departments, subjects, halls, ~50 faculty, one exam period)
+   can be loaded, so Developer 2 can see real charts immediately.
+4. `main` is green in CI and everything is committed and pushed to GitHub.
+
+Developer 2's first day: clone, `graphify hook install`, `graphify update .`, read HANDOVER.md
+and GRAPH_REPORT.md, connect Supabase (ARCHITECTURE.md §10), load the seed, click through every
+admin page, then start M9.
 
 ## 4. Developer 2 — advanced features and completion
 

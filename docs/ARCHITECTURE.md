@@ -141,10 +141,25 @@ Supabase Auth is not used (per brief). Invigilo owns identity:
 
 - `app_user` — global login identity: email (unique, case-insensitive), BCrypt password hash,
   name, status. A person can, in principle, belong to more than one college.
-- `college_membership` — `(user, college, roles, department_id for HOD, faculty_id link)`.
-  Roles: `EXAM_CELL_ADMIN`, `HOD`, `FACULTY` (a user may hold several within one college, e.g. HOD + FACULTY).
-- `faculty` is a college's *staff record* and can exist without a login. An admin can later invite
-  the faculty member, which creates/links an `app_user` and membership.
+- `college_membership` — `(user, college, roles, faculty_id)`. Roles: `EXAM_CELL_ADMIN`, `HOD`,
+  `FACULTY` (a user may hold several within one college, e.g. HOD + FACULTY). A HOD's department
+  is the department of their linked faculty record.
+- `faculty` is a college's *staff record* and can exist without a login.
+
+**Invitations (M4).** The exam cell creates a one-time link for a faculty member (`POST
+/faculty/{id}/access/invitation`, roles FACULTY + optional HOD / EXAM_CELL_ADMIN). The raw token
+is returned once; only its SHA-256 is stored; it expires after 7 days; a new link revokes the old
+one. The invitee opens `/accept-invite?token=…` (public `POST /auth/invitations/preview` and
+`/auth/invitations/accept`):
+- no account for the email → they choose a name and password; a user and membership are created;
+- an account exists (e.g. visiting faculty, or the admin's own faculty record) → they must enter
+  that account's password; the existing user gets a membership, or their existing membership in
+  this college is linked to the faculty record.
+
+Access management (`PUT /faculty/{id}/access`): roles always include FACULTY; disabling revokes
+all refresh sessions; nobody can change their own access; the last active EXAM_CELL_ADMIN cannot
+be demoted or disabled. Role changes reach existing access tokens within their 15-minute life.
+There is no email delivery (Q8): the admin copies the link to the faculty member.
 
 Tokens:
 - **Access token**: HS256 JWT, 15 min, claims `sub` (user id), `cid`, `roles`, `mid` (membership id),
@@ -209,12 +224,25 @@ important ones, not exhaustive. All tenant tables: `id uuid pk`, `college_id`, `
 
 **Academic**
 - `department` — code, name, active. `unique (college_id, code)`. *(M3)*
-- `faculty` — department, employee_code, full_name, email, phone, designation,
-  `employment_type` (`REGULAR`, `VISITING`, `GUEST`...), seniority_rank or joining_date,
-  chief_eligible (bool), duty_weight (numeric, default 1.0, for reduced-load faculty), active.
-- `faculty_subject` — which subjects a faculty member teaches (drives the *own-subject* rule).
-- `faculty_restriction` — per-faculty hard restrictions: type (`EXCLUDE_HALL`, `EXCLUDE_DEPARTMENT_EXAMS`,
-  `MAX_DUTIES`, `NOT_CHIEF`...), value, reason.
+- `faculty` *(M4)* — department (composite FK), employee_code (unique per college), full_name,
+  email (unique per college when set; contact address and invitation target, not the login email),
+  phone, designation (free text), `employment_type` (`REGULAR`, `VISITING`, `GUEST`,
+  `NON_TEACHING`), joined_on (seniority = years of service), chief_eligible, duty_weight
+  (0.10-2.00, 1.00 = normal share), active.
+- `faculty_subject` *(M4)* — entity with its own `college_id` and composite FKs to faculty and
+  subject; drives the own-subject rule.
+- `faculty_restriction` *(M4)* — `EXCLUDE_HALL` (hall), `EXCLUDE_DEPARTMENT_EXAMS` (department),
+  `NOT_CHIEF`, `MAX_DUTIES_PER_DAY` / `MAX_DUTIES_PER_PERIOD` (max_value), reason. A DB CHECK
+  enforces which column each type uses. Always HARD for the engine.
+- `invitation` *(M4)* — faculty, email, roles (jsonb), token_hash, expires/accepted/revoked.
+
+**CSV import (M4)** — `POST /api/v1/imports/{departments|subjects|halls|faculty}?dryRun=true`
+(multipart `file`, ≤ 2 MB, ≤ 5000 rows, UTF-8 with or without BOM) and
+`GET /api/v1/imports/{type}/template`. Every row is validated with the same Bean Validation rules
+as the API plus code references, in-file duplicates and conflicts with existing records; errors
+are reported per line and column. Without errors the file is applied in one transaction through
+the normal services (upsert by code, nothing deleted, normal audit entries plus one
+`IMPORT_COMPLETED`); a failure on any row rolls back the whole file.
 - `subject` — department (composite FK `(college_id, department_id)`), code, name, programme,
   semester (1-12), active. *(M3)*
 - `hall` — code, name, building, capacity (1-2000), min_invigilators (1-20), is_lab, active. *(M3)*

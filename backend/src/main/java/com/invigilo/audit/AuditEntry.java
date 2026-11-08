@@ -57,8 +57,10 @@ public class AuditEntry {
 
     protected AuditEntry() {}
 
-    AuditEntry(UUID actorUserId, String action, String entityType, UUID entityId,
+    /** {@code collegeId} null = stamped from the tenant context; set it only in the system context. */
+    AuditEntry(UUID collegeId, UUID actorUserId, String action, String entityType, UUID entityId,
                JsonNode beforeState, JsonNode afterState, String reason, Instant occurredAt) {
+        this.collegeId = collegeId;
         this.actorUserId = actorUserId;
         this.action = action;
         this.entityType = entityType;

@@ -3,6 +3,7 @@ package com.invigilo.department;
 import com.invigilo.audit.AuditService;
 import com.invigilo.common.error.ApiException;
 import com.invigilo.common.persistence.Codes;
+import com.invigilo.common.persistence.UpsertResult;
 import com.invigilo.common.persistence.UsageCheck;
 import com.invigilo.common.persistence.Versions;
 import java.util.List;
@@ -68,8 +69,32 @@ public class DepartmentService {
         department.update(code, input.name(), input.active());
         repository.flush();
         DepartmentView after = DepartmentView.of(department);
-        audit.record("DEPARTMENT_UPDATED", "department", id, before, after, null);
+        if (after.version() != before.version()) { // nothing changed: no audit noise
+            audit.record("DEPARTMENT_UPDATED", "department", id, before, after, null);
+        }
         return after;
+    }
+
+    /** Create or update by code, for CSV import (the file is the source, so no stale-edit check). */
+    @Transactional
+    public UpsertResult upsert(DepartmentInput input) {
+        var existing = repository.findByCode(Codes.normalize(input.code()));
+        if (existing.isEmpty()) {
+            create(input);
+            return UpsertResult.CREATED;
+        }
+        Department d = existing.get();
+        long before = d.getVersion();
+        DepartmentView after = update(d.getId(), input, d.getVersion());
+        return after.version() == before ? UpsertResult.UNCHANGED : UpsertResult.UPDATED;
+    }
+
+    /** All departments by code (tenant), for lookups such as CSV import. */
+    @Transactional(readOnly = true)
+    public java.util.Map<String, Department> byCode() {
+        java.util.Map<String, Department> map = new java.util.HashMap<>();
+        repository.findAllByOrderByCodeAsc().forEach(d -> map.put(d.getCode(), d));
+        return map;
     }
 
     /** Deletes an unused department. A department that anything refers to must be deactivated instead. */

@@ -15,6 +15,8 @@ export function AdminLayout() {
           { to: '/admin/departments', label: 'Departments', end: false },
           { to: '/admin/subjects', label: 'Subjects', end: false },
           { to: '/admin/halls', label: 'Halls', end: false },
+          { to: '/admin/faculty', label: 'Faculty', end: false },
+          { to: '/admin/import', label: 'Import', end: false },
           { to: '/admin/settings/college', label: 'College', end: false },
           { to: '/admin/settings/policy', label: 'Policy', end: false },
         ]

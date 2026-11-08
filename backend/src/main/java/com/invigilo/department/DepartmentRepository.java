@@ -13,5 +13,7 @@ interface DepartmentRepository extends JpaRepository<Department, UUID> {
 
     boolean existsByCode(String code);
 
+    java.util.Optional<Department> findByCode(String code);
+
     boolean existsByCodeAndIdNot(String code, UUID id);
 }

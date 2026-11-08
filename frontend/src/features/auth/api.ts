@@ -7,6 +7,8 @@ export interface SessionInfo {
   user: { id: string; email: string; fullName: string }
   college: { id: string; code: string; name: string; status: CollegeStatus }
   membershipId: string
+  /** Set when this login belongs to a faculty record. */
+  facultyId: string | null
   roles: Role[]
 }
 

@@ -106,6 +106,34 @@ should use composite FKs to `subject (college_id, id)` and `faculty (college_id,
 
 ---
 
+## M4 Faculty, access and CSV import: done  (2026-11-08)
+
+**Built**
+- Migration `V5__faculty_access`: `faculty`, `faculty_subject`, `faculty_restriction`,
+  `invitation`, `college_membership.faculty_id`.
+- Backend: `faculty/` (records, subjects taught, restrictions, delete guards for departments,
+  subjects and halls), `access/` (invitations, accept flow, role/status management, last-admin and
+  self-lock-out rules), `importer/` (CSV import), `auth` invitation endpoints and `SessionRevoker`,
+  `common/security/Tokens`, `common/persistence/UpsertResult`, `AuditService.recordForCollege`.
+  `/auth/me` and login now return `facultyId`.
+- Frontend: `/admin/faculty` (search/filters/paging), `/admin/faculty/new` and `/:id` (details,
+  subject picker, restrictions, sign-in access with copyable invitation link), `/admin/import`
+  (template download, check, import), public `/accept-invite`.
+
+**Verified**
+- Backend: 98 tests (27 new: faculty CRUD and subject changes, uniqueness, validation, delete guards,
+  restrictions, cross-college isolation; invitation create/replace/revoke/expire/accept for new and
+  existing accounts, role changes, disabling revokes sessions, last admin, self-lock-out; CSV dry
+  run errors, ordered import with upserts, BOM/encoding, header checks, rollback of a failing file).
+- Frontend: 51 tests; lint, typecheck, build clean.
+- Bug found by tests and fixed: duty weight `0.5` vs stored `0.50` counted as a change on re-import.
+
+**Not verified**
+- Not exercised in a browser against a running backend (database deferred to Developer 2).
+- Invitation links are copied by the admin; there is no email sending (Q8).
+
+---
+
 ## Developer 1 → Developer 2  (date)
 
 **Completed milestones:**  

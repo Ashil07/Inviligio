@@ -42,38 +42,50 @@ engine can be unit-tested with hand-built problems and the result is reproducibl
 
 ## 3. Policy catalogue (`PolicySettings`, versioned per college)
 
-Each configurable rule has a **mode**: `HARD` (filter), `SOFT` (penalty with weight), or `OFF`.
-Rules marked *always hard* cannot be relaxed by configuration.
+Implemented in M2 as `policy/PolicySettings` (backend record, Bean Validation) and
+`features/policy/schema.ts` (Zod mirror). Stored as JSON in `college_policy.settings`, one immutable
+row per version. Limits with a **mode** are `HARD` (filter), `SOFT` (penalty) or `OFF`.
 
-| Setting | Type / default | Kind |
-|---|---|---|
-| no overlapping duties | — | always HARD |
-| approved leave / unavailability respected | — | always HARD (explicit, audited admin override per session only) |
-| inactive faculty excluded | — | always HARD |
-| `allowOwnSubject` | bool, default **false** | HARD when false: faculty may not invigilate a hall seating a subject they teach |
-| `ownDepartmentRule` | `ALLOW` / `AVOID` / `FORBID`, default `ALLOW` | FORBID = HARD, AVOID = SOFT |
-| `visitingFacultyEligible` | bool, default true | HARD filter on employment type |
-| faculty-specific restrictions | rows in `faculty_restriction` | HARD |
-| `chiefRequired` | `NONE` / `PER_HALL`, default `NONE` | creates CHIEF positions, chief-eligible only |
-| `chiefCountsTowardsStaffing` | bool, default true | position count |
-| `maxDutiesPerDay` | int, default 2 | HARD |
-| `maxConsecutiveSessions` | int + mode, default 2 / HARD | |
-| `minRestMinutes` | int, default 0 | HARD |
-| `consecutiveDays` | max days + mode, default OFF | |
-| `maxDutiesPerPeriod` | int or null | HARD |
-| `equalDistribution` | weight, default high | SOFT |
-| `historicalWorkloadWeight` | 0..1, default 0.3 | SOFT (previous periods count partially) |
-| `seniorityPolicy` | `NONE` / `FEWER_DUTIES_FOR_SENIORS` / `SENIORS_AS_CHIEF` | SOFT (see open question Q4) |
-| `avoidRepeatHall` | weight, default low | SOFT |
-| staffing: `studentsPerInvigilator` | int, default 30 | position count |
-| staffing: `practicalStudentsPerInvigilator` | int or null | position count for PRACTICAL exams |
-| staffing: hall `min_invigilators` | per hall | position count |
-| availability: `allowSessionLevelUnavailability`, `leaveRequiresHodApproval`, `adminCanOverride` | bools | workflow |
-| swaps: `swapsEnabled`, `recipientMustAccept`, `hodApprovalRequired`, `adminDirectReassign` | bools | workflow |
+**Always hard, not configurable:** no overlapping duties; approved leave/unavailability respected
+(explicit, audited admin override per session only, if `adminCanOverrideUnavailability`); inactive
+faculty excluded; faculty-specific restrictions (`faculty_restriction`, M4).
+
+| JSON path | Default | Range | Applied as |
+|---|---|---|---|
+| `faculty.allowOwnSubject` | `false` | bool | false = HARD: not in a hall seating a subject one teaches |
+| `faculty.ownDepartmentExams` | `ALLOW` | `ALLOW`/`AVOID`/`FORBID` | FORBID = HARD, AVOID = SOFT |
+| `faculty.visitingFacultyEligible` | `true` | bool | HARD filter on employment type |
+| `faculty.seniorsGetFewerDuties` | `false` | bool | SOFT: seniority lowers the fair-share target (Q4) |
+| `faculty.preferSeniorsAsChief` | `false` | bool | SOFT: seniors ranked first for CHIEF positions (Q4) |
+| `faculty.chiefInvigilator` | `NONE` | `NONE`/`PER_HALL` | creates CHIEF positions, chief-eligible faculty only |
+| `faculty.chiefCountsTowardsStaffing` | `true` | bool | position count |
+| `workload.maxDutiesPerDay` | 2 | 1-6 | HARD |
+| `workload.consecutiveSessions` | HARD, 2 | mode + 1-20 | per mode |
+| `workload.minRestMinutes` | 0 | 0-720 | HARD |
+| `workload.consecutiveDays` | OFF, 3 | mode + 1-20 | per mode |
+| `workload.maxDutiesPerPeriod` | null | null or 1-200 | HARD when set |
+| `workload.equalDistributionWeight` | 8 | 0-10 | SOFT weight of the quadratic load cost |
+| `workload.historicalWorkloadPercent` | 30 | 0-100 | share of previous periods' load counted |
+| `workload.avoidRepeatHallWeight` | 2 | 0-10 | SOFT weight |
+| `staffing.studentsPerInvigilator` | 30 | 1-500 | position count |
+| `staffing.practicalStudentsPerInvigilator` | null | null or 1-500 | position count for PRACTICAL exams (null = theory ratio) |
+| `staffing.minInvigilatorsPerHall` | 1 | 1-20 | position count (a hall's own minimum, M3, may be higher) |
+| `availability.allowFullDayUnavailability` | `true` | bool | workflow |
+| `availability.allowSessionUnavailability` | `true` | bool | workflow |
+| `availability.leaveRequiresHodApproval` | `false` | bool | workflow; false = requests take effect immediately |
+| `availability.adminCanOverrideUnavailability` | `true` | bool | workflow |
+| `swaps.swapsEnabled` | `true` | bool | workflow |
+| `swaps.recipientMustAccept` | `true` | bool | workflow |
+| `swaps.hodApprovalRequired` | `false` | bool | workflow |
+| `swaps.adminCanReassignDirectly` | `true` | bool | workflow |
+
+All fields are required in API requests (wrapper types + `@NotNull`), so a client can never change
+behaviour by omitting a rule. **Adding a field** = add it to both schemas, choose a default, and
+write a Flyway migration that backfills it into every existing `college_policy.settings` row.
 
 **Required positions for a session hall** =
-`max(hall.min_invigilators, ceil(total_students / ratio))` where ratio is the practical ratio if any
-seated exam is PRACTICAL, plus one CHIEF position if `chiefRequired = PER_HALL` and
+`max(staffing.minInvigilatorsPerHall, hall.min_invigilators, ceil(total_students / ratio))` where ratio is the practical ratio if any
+seated exam is PRACTICAL, plus one CHIEF position if `chiefInvigilator = PER_HALL` and
 `chiefCountsTowardsStaffing = false`. Admin may override per session hall with a reason.
 
 ## 4. Algorithm

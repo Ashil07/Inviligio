@@ -189,17 +189,23 @@ important ones, not exhaustive. All tenant tables: `id uuid pk`, `college_id`, `
 `updated_at`, `unique (college_id, id)`.
 
 **Platform / identity**
-- `college` — code (unique), name, affiliation, address, academic_year label, time_zone
+- `college` — code (unique, upper-case), name, affiliation, address, city, state, postal_code,
+  contact_email, contact_phone, academic_year (`2026-27`), time_zone
   (default `Asia/Kolkata`), status (`ONBOARDING`, `ACTIVE`, `SUSPENDED`), onboarding_completed_at.
 - `app_user`, `college_membership`, `refresh_token`.
 
 **Policy (versioned)**
-- `college_policy` — college_id, version (int), settings `jsonb`, created_by, created_at,
-  `unique (college_id, version)`. Settings are a typed Java record (`PolicySettings`) serialized to
+- `college_policy` — college_id, policy_version (int), settings `jsonb`, created_by, created_at,
+  `unique (college_id, policy_version)` (`version` is the optimistic-lock column on every table).
+  Settings are a typed Java record (`PolicySettings`) serialized to
   JSONB and validated with Bean Validation; JSONB because policy options will grow and are always
   read as a whole. **Every edit creates a new version**; allocation runs and duty charts store the
   `policy_id` they were built with, which is how *"changing rules must not silently modify published
   charts"* is guaranteed. The full catalogue of settings is in ALLOCATION_ENGINE.md §3.
+  Saving requires `basedOnVersion` (the version the editor loaded); a mismatch is 409
+  `POLICY_CHANGED`, so two admins cannot overwrite each other. Saving identical settings is a no-op.
+  Endpoints: `GET /policy` (any member; version 0 = unsaved defaults), `PUT /policy`,
+  `GET /policy/versions`, `GET /policy/versions/{n}` (admin).
 
 **Academic**
 - `department` — code, name. `unique (college_id, code)`.
@@ -257,6 +263,15 @@ new DRAFT version that supersedes the published one on publish.
 **Audit**
 - `audit_log` — append-only: college_id, actor_user_id, action, entity_type, entity_id,
   before `jsonb`, after `jsonb`, reason, occurred_at. Written in the same transaction as the change.
+  Implemented (M2): `audit.AuditService.record(...)` is `Propagation.MANDATORY`, so it can only be
+  called inside the changing transaction; pass DTOs/records as before/after, never entities.
+  Current actions: `COLLEGE_PROFILE_UPDATED`, `COLLEGE_ONBOARDING_COMPLETED`, `POLICY_VERSION_CREATED`.
+
+**College endpoints (M2):** `GET /api/v1/college` (any member), `PUT /api/v1/college` and
+`POST /api/v1/college/complete-onboarding` (admin). Completion requires affiliation, address,
+city, state, academic year and a saved policy (422 `ONBOARDING_INCOMPLETE` lists what is missing);
+it is idempotent once ACTIVE. `College` is not tenant-filtered, so services load it with
+`TenantContext.requireCollegeId()` only.
 
 ---
 

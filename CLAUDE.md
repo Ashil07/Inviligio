@@ -24,6 +24,8 @@ swaps or substitutes. Current state and next milestone: `docs/HANDOVER.md`, `doc
 - Tables live in schema `invigilo`, never `public` (Supabase exposes `public`).
 - Controllers thin, services own transactions and rules, DTOs are records, entities never leave services.
 - Errors: throw `ApiException` with a stable `code`; the handler emits ProblemDetail.
+- State changes that affect duties call `AuditService.record` inside the same transaction.
+- Policy rules: change `PolicySettings` and `features/policy/schema.ts` together, plus a backfill migration.
 - Frontend: server data through TanStack Query hooks in `features/<x>/api.ts`; forms with React Hook
   Form + Zod; no fake/mock-only buttons in app code.
 - QR attendance is out of scope. Do not add it.

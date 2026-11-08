@@ -59,6 +59,30 @@ test; use `SystemTransactions` only for pre-tenant flows.
 
 ---
 
+## M2 College onboarding & policy: done  (2026-11-08)
+
+**Built**
+- Migration `V3__college_profile_policy_audit`: institution columns on `college`, `college_policy`, `audit_log`.
+- Backend: `policy/` (PolicySettings, CollegePolicy, PolicyService, PolicyController),
+  `college/` (CollegeService, CollegeController), `audit/` (AuditEntry, AuditService).
+- Frontend: onboarding wizard `/admin/setup`; `/admin/settings/college`; `/admin/settings/policy`
+  with version history and read-only past versions; admin overview; exam-cell sub-navigation.
+  Shared `PolicySections` (one form section per policy area), Zod mirror of PolicySettings,
+  `describePolicy` plain-language summary.
+
+**Verified**
+- Backend: 55 tests pass (15 new: profile, validation, roles, versioning, stale edit, explicit
+  rules, cross-college isolation, onboarding completion, audit).
+- Frontend: 34 tests pass (wizard end to end with mocked API, policy page save/conflict/field
+  errors/history, schemas); lint, typecheck, build clean.
+
+**Not verified**
+- Not exercised in a browser against a running backend (database deferred to Developer 2).
+- The wizard keeps policy answers in memory until the final step; leaving midway loses them
+  (institution details are saved at step 1).
+
+---
+
 ## Developer 1 → Developer 2  (date)
 
 **Completed milestones:**  

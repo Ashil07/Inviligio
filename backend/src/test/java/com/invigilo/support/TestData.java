@@ -85,6 +85,13 @@ public class TestData {
         return http.exchange(path, HttpMethod.GET, bearer(token), type);
     }
 
+    public <T> ResponseEntity<T> send(HttpMethod method, String path, String token, Object body, Class<T> type) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(token);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        return http.exchange(path, method, new HttpEntity<>(body, headers), type);
+    }
+
     /** Raw Set-Cookie header for the refresh cookie, or null. */
     public static String refreshSetCookie(ResponseEntity<?> response) {
         List<String> cookies = response.getHeaders().get(HttpHeaders.SET_COOKIE);

@@ -3,7 +3,11 @@ import { NotFoundPage } from '@/components/NotFoundPage'
 import { HomeRedirect, PublicOnly, RequireAuth, RequireRole } from '@/features/auth/guards'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { RegisterCollegePage } from '@/features/auth/RegisterCollegePage'
+import { CollegeSettingsPage } from '@/features/college/CollegeSettingsPage'
+import { OnboardingWizard } from '@/features/onboarding/OnboardingWizard'
+import { PolicySettingsPage, PolicyVersionPage } from '@/features/policy/PolicySettingsPage'
 import { SystemStatusPage } from '@/features/system/SystemStatusPage'
+import { AdminLayout, AdminPage } from './AdminLayout'
 import { AppLayout } from './AppLayout'
 import { AdminHomePage, FacultyHomePage, HodHomePage } from './RoleHomePages'
 
@@ -27,7 +31,26 @@ export const routes: RouteObject[] = [
         element: <AppLayout />,
         children: [
           { path: '/', element: <HomeRedirect /> },
-          { element: <RequireRole role="EXAM_CELL_ADMIN" />, children: [{ path: '/admin', element: <AdminHomePage /> }] },
+          {
+            element: <RequireRole role="EXAM_CELL_ADMIN" />,
+            children: [
+              {
+                element: <AdminLayout />,
+                children: [
+                  { path: '/admin', element: <AdminHomePage /> },
+                  { path: '/admin/setup', element: <OnboardingWizard /> },
+                  {
+                    element: <AdminPage />,
+                    children: [
+                      { path: '/admin/settings/college', element: <CollegeSettingsPage /> },
+                      { path: '/admin/settings/policy', element: <PolicySettingsPage /> },
+                      { path: '/admin/settings/policy/versions/:version', element: <PolicyVersionPage /> },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
           { element: <RequireRole role="HOD" />, children: [{ path: '/hod', element: <HodHomePage /> }] },
           { element: <RequireRole role="FACULTY" />, children: [{ path: '/faculty', element: <FacultyHomePage /> }] },
         ],

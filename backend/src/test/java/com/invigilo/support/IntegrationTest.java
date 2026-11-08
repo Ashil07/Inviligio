@@ -38,8 +38,40 @@ public abstract class IntegrationTest {
     @Autowired
     protected TenantTestSupport tenants;
 
+    @Autowired
+    private com.invigilo.identity.AppUserRepository userRepository;
+
+    @Autowired
+    private com.invigilo.college.CollegeRepository collegeRepository;
+
+    @Autowired
+    private com.invigilo.identity.CollegeMembershipRepository membershipRepository;
+
+    @Autowired
+    private org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
+
     protected TestData data() {
         return new TestData(http);
+    }
+
+    /**
+     * Creates a new user with the given roles in an existing college (there is no invite API yet)
+     * and signs them in to that college. Returns their access token.
+     */
+    @SuppressWarnings("unchecked")
+    protected String signInAsNewMember(java.util.UUID collegeId, com.invigilo.identity.Role... roles) {
+        String email = "member." + TestData.unique().toLowerCase() + "@example.test";
+        tenants.asSystem(() -> {
+            var college = collegeRepository.findById(collegeId).orElseThrow();
+            var user = userRepository.save(new com.invigilo.identity.AppUser(
+                    email, passwordEncoder.encode(TestData.PASSWORD), "Member " + email));
+            return membershipRepository.save(com.invigilo.identity.CollegeMembership.forCollege(
+                    college, user, java.util.EnumSet.copyOf(java.util.List.of(roles))));
+        });
+        var response = http.postForEntity("/api/v1/auth/login", TestData.json(java.util.Map.of(
+                "email", email, "password", TestData.PASSWORD, "collegeId", collegeId)), java.util.Map.class);
+        var auth = (java.util.Map<String, Object>) response.getBody().get("auth");
+        return (String) auth.get("accessToken");
     }
 
     private static EmbeddedPostgres start() {

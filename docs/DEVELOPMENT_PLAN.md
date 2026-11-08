@@ -39,7 +39,7 @@ merged. If two branches race for the same number, the later one renumbers before
 |---|---|---|
 | M0 | Foundation | **Done in initialization.** Builds, security skeleton, error format, status endpoint, CI, docs. |
 | M1 | Auth & tenancy | **Done.** `college`, `app_user`, `college_membership`, `refresh_token` migrations; register-college/login/refresh/logout/`me`; `TenantContext` + `@TenantId` base entity; tenant-isolation test harness. FE: login (with college picker), college registration, in-memory session, Axios 401→refresh→retry, role areas and guards. |
-| M2 | College onboarding & policy | (Basic registration already done in M1.) Add institution details to `college` (affiliation, address, academic year). Multi-step onboarding wizard (institution → faculty/subject rules → workload → staffing → availability → swaps). `PolicySettings` record, versioned `college_policy`, edit page with HARD/SOFT/OFF modes. |
+| M2 | College onboarding & policy | **Done.** Institution profile on `college`; versioned `college_policy` (`PolicySettings`, HARD/SOFT/OFF modes); `audit_log`; onboarding wizard (institution → faculty rules → workload → staffing → availability → swaps → review); college and policy settings pages with version history. |
 | M3 | Departments, subjects, halls | CRUD, uniqueness per college, deactivate instead of delete when referenced. |
 | M4 | Faculty | CRUD, department, designation, employment type, seniority, chief eligibility, duty weight, subjects taught, restrictions, invite to create login. **Recommended:** CSV import for faculty/subjects/halls (real colleges have hundreds of rows). |
 | M5 | Exam scheduling | Periods, sessions (date + time range), exams, session halls, seating; capacity and consistency validation; computed required invigilators with override. |
@@ -78,7 +78,7 @@ change these; update ARCHITECTURE.md / ALLOCATION_ENGINE.md when answered.
 | Q1 | Who may register a new college — anyone (self-service) or a platform operator? Is there a platform super-admin? | Self-service registration; registrant becomes EXAM_CELL_ADMIN; no super-admin in v1. |
 | Q2 | Is the "chief invigilator" per **hall**, or per session/centre (Chief Superintendent)? Does the chief count toward the hall's invigilator count? | Optional per hall; counts toward staffing. |
 | Q3 | QR attendance is excluded — so what makes a duty "completed" for remuneration? | Past-dated assignments count as completed unless the admin marks them ABSENT/CANCELLED. |
-| Q4 | What does "senior faculty receive preference" mean: fewer duties, chief roles, or both? | Both offered as separate policy options. |
+| Q4 | What does "senior faculty receive preference" mean: fewer duties, chief roles, or both? | Both offered as separate policy options (implemented in M2: `seniorsGetFewerDuties`, `preferSeniorsAsChief`). |
 | Q5 | Can one person belong to several colleges (e.g. visiting faculty)? | Supported in the data model; college picker at login. |
 | Q6 | Do HODs (and exam-cell staff) also receive invigilation duties? | Yes, if they have an active faculty record. |
 | Q7 | Who approves leave when HOD approval is *not* required — auto-approve or exam cell? | Auto-approve; admin can always reject/override. |

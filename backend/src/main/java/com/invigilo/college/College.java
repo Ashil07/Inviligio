@@ -7,9 +7,14 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 
-/** A tenant. Not itself tenant-scoped; tenant-owned rows reference it through {@code college_id}. */
+/**
+ * A tenant. Not itself tenant-scoped: load it by the current tenant id
+ * ({@code TenantContext.requireCollegeId()}), never by an id taken from a request.
+ */
 @Entity
 @Table(name = "college")
 public class College extends BaseEntity {
@@ -34,6 +39,23 @@ public class College extends BaseEntity {
     @Column(name = "onboarding_completed_at")
     private Instant onboardingCompletedAt;
 
+    private String affiliation;
+    private String address;
+    private String city;
+    private String state;
+
+    @Column(name = "postal_code")
+    private String postalCode;
+
+    @Column(name = "contact_email")
+    private String contactEmail;
+
+    @Column(name = "contact_phone")
+    private String contactPhone;
+
+    @Column(name = "academic_year")
+    private String academicYear;
+
     protected College() {}
 
     public College(String code, String name) {
@@ -50,23 +72,60 @@ public class College extends BaseEntity {
         return status != Status.SUSPENDED;
     }
 
-    public String getCode() {
-        return code;
+    public void updateProfile(Profile profile) {
+        this.name = profile.name();
+        this.affiliation = profile.affiliation();
+        this.address = profile.address();
+        this.city = profile.city();
+        this.state = profile.state();
+        this.postalCode = profile.postalCode();
+        this.contactEmail = profile.contactEmail();
+        this.contactPhone = profile.contactPhone();
+        this.academicYear = profile.academicYear();
+        this.timeZone = profile.timeZone();
     }
 
-    public String getName() {
-        return name;
+    /** Institution fields that onboarding requires; empty when the profile is complete. */
+    public List<String> missingProfileFields() {
+        List<String> missing = new ArrayList<>();
+        if (isBlank(affiliation)) missing.add("affiliation");
+        if (isBlank(address)) missing.add("address");
+        if (isBlank(city)) missing.add("city");
+        if (isBlank(state)) missing.add("state");
+        if (isBlank(academicYear)) missing.add("academicYear");
+        return missing;
     }
 
-    public String getTimeZone() {
-        return timeZone;
+    void completeOnboarding(Instant at) {
+        this.status = Status.ACTIVE;
+        this.onboardingCompletedAt = at;
     }
 
-    public Status getStatus() {
-        return status;
+    public Profile profile() {
+        return new Profile(name, affiliation, address, city, state, postalCode, contactEmail, contactPhone,
+                academicYear, timeZone);
     }
 
-    public Instant getOnboardingCompletedAt() {
-        return onboardingCompletedAt;
+    private static boolean isBlank(String s) {
+        return s == null || s.isBlank();
     }
+
+    /** Editable institution details (already validated and trimmed). */
+    public record Profile(String name, String affiliation, String address, String city, String state,
+                          String postalCode, String contactEmail, String contactPhone, String academicYear,
+                          String timeZone) {}
+
+    public String getCode() { return code; }
+    public String getName() { return name; }
+    public String getTimeZone() { return timeZone; }
+    public Status getStatus() { return status; }
+    public Instant getOnboardingCompletedAt() { return onboardingCompletedAt; }
+    public String getAffiliation() { return affiliation; }
+    public String getAddress() { return address; }
+    public String getCity() { return city; }
+    public String getState() { return state; }
+    public String getPostalCode() { return postalCode; }
+    public String getContactEmail() { return contactEmail; }
+    public String getContactPhone() { return contactPhone; }
+    public String getAcademicYear() { return academicYear; }
 }

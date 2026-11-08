@@ -23,11 +23,16 @@ public record CurrentUser(UUID userId, UUID collegeId, UUID membershipId, Set<Ro
 
     /** @throws IllegalStateException when called outside an authenticated request */
     public static CurrentUser require() {
+        return find().orElseThrow(() -> new IllegalStateException("No authenticated user"));
+    }
+
+    /** The caller, or empty outside an authenticated request (e.g. login, background work). */
+    public static java.util.Optional<CurrentUser> find() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth instanceof JwtAuthenticationToken token) {
-            return from(token.getToken());
+            return java.util.Optional.of(from(token.getToken()));
         }
-        throw new IllegalStateException("No authenticated user");
+        return java.util.Optional.empty();
     }
 
     static CurrentUser from(Jwt jwt) {

@@ -22,6 +22,11 @@ export const sessionStore = {
     listeners.forEach((l) => l(auth))
   },
 
+  /** Replaces the session details (e.g. college status after onboarding) and keeps the token. */
+  updateSession(session: AuthResponse['session']) {
+    if (current) sessionStore.set({ ...current, session })
+  },
+
   subscribe(listener: Listener): () => void {
     listeners.add(listener)
     return () => listeners.delete(listener)

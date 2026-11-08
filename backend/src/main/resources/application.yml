@@ -1,0 +1,72 @@
+# Invigilo backend configuration.
+# Secrets and environment-specific values come from environment variables.
+# For local development, copy backend/.env.example to backend/.env (git-ignored);
+# it is imported below as a properties file.
+spring:
+  application:
+    name: invigilo
+  config:
+    import: optional:file:.env[.properties]
+
+  datasource:
+    # Supabase: use the *Session pooler* (port 5432, IPv4) or the direct connection.
+    # Do NOT use the transaction pooler (6543) with JDBC + Flyway - see docs/ARCHITECTURE.md.
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/invigilo}
+    username: ${DB_USERNAME:invigilo}
+    password: ${DB_PASSWORD:invigilo}
+    hikari:
+      # Supabase poolers cap client connections; keep the pool small.
+      maximum-pool-size: ${DB_POOL_SIZE:5}
+      connection-timeout: 10000
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      # Flyway owns the schema. Hibernate only validates that entities match it.
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: invigilo
+        jdbc:
+          time_zone: UTC
+
+  flyway:
+    # All tables live in the dedicated "invigilo" schema, NOT "public".
+    # Supabase exposes "public" through its auto-generated Data API; a separate
+    # schema keeps Invigilo data reachable only through this Spring Boot API.
+    schemas: invigilo
+    default-schema: invigilo
+    create-schemas: true
+    locations: classpath:db/migration
+
+  mvc:
+    problemdetails:
+      enabled: true
+
+server:
+  port: ${PORT:8080}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: never
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+invigilo:
+  security:
+    jwt:
+      # HMAC-SHA256 signing key, at least 32 characters. Required - the app refuses to start without it.
+      secret: ${JWT_SECRET:}
+      issuer: invigilo
+      access-token-ttl: ${JWT_ACCESS_TOKEN_TTL:PT15M}
+    cors:
+      allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}

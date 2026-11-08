@@ -1,0 +1,31 @@
+# Secrets
+.env
+.env.*
+!.env.example
+*.local
+
+# Backend
+backend/target/
+backend/.mvn/wrapper/maven-wrapper.jar
+*.class
+*.log
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/coverage/
+
+# Graphify: the graph is a local, regenerated artifact (post-commit hook / `graphify update .`).
+# Committing it would dirty the tree after every commit.
+graphify-out/
+
+# IDE / OS
+.idea/
+*.iml
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db
+
+# Claude Code per-machine settings (graphify hooks use absolute paths)
+.claude/settings.local.json

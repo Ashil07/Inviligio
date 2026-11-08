@@ -1,0 +1,5 @@
+invigilo:
+  security:
+    jwt:
+      secret: test-only-secret-key-that-is-at-least-32-chars
+      issuer: invigilo

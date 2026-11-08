@@ -1,0 +1,22 @@
+# Local development database. Same PostgreSQL major version as new Supabase projects.
+# Start:  docker compose up -d      Stop: docker compose down      Reset data: docker compose down -v
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: invigilo-postgres
+    environment:
+      POSTGRES_DB: invigilo
+      POSTGRES_USER: invigilo
+      POSTGRES_PASSWORD: invigilo
+    ports:
+      - "5432:5432"
+    volumes:
+      - invigilo-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U invigilo -d invigilo"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  invigilo-pgdata:

@@ -1,0 +1,313 @@
+# Invigilo — Architecture and Technical Decisions
+
+This is the reference for *how* Invigilo is built and *why*. Product requirements live in the
+original brief; the allocation engine has its own document, [ALLOCATION_ENGINE.md](ALLOCATION_ENGINE.md).
+When a decision here changes, update this file in the same PR.
+
+---
+
+## 1. Shape of the system
+
+**One Spring Boot application (modular monolith) + one React SPA + one PostgreSQL database (Supabase).**
+
+```
+Browser (React SPA)  ──HTTPS/JSON──▶  Spring Boot API  ──JDBC/TLS──▶  Supabase PostgreSQL
+  Vite, TS, Tailwind                   Security (JWT)                   schema "invigilo"
+  TanStack Query + Axios               Feature modules                  Flyway-managed
+                                       Allocation engine (pure Java)
+```
+
+Why a monolith: one team of two, one deployable, transactional consistency across features that
+are tightly coupled (allocation ↔ availability ↔ swaps ↔ audit). Microservices would add network
+failure modes and distributed transactions for no benefit at college scale (hundreds of faculty,
+thousands of duties per period).
+
+### Repository layout
+
+```
+backend/                 Spring Boot (Maven wrapper, Java 21)
+  src/main/java/com/invigilo/
+    InvigiloApplication.java
+    config/              cross-cutting configuration (security, properties)
+    common/              shared building blocks (errors, base entities, tenant context, audit)
+    system/              status endpoint
+    <feature>/           one package per feature (see below)
+  src/main/resources/db/migration/   Flyway SQL migrations
+frontend/                React + Vite + TypeScript
+  src/app/               router, providers, layouts
+  src/lib/               api client, utilities
+  src/components/        shared UI components
+  src/features/<feature>/  pages, components, api hooks, schemas, tests per feature
+docs/                    this file, allocation engine, development plan, handover
+docker-compose.yml       local PostgreSQL
+```
+
+### Backend package-by-feature
+
+Each feature package owns its entity, repository, service, controller and DTOs:
+
+```
+auth  tenant  college  policy  department  faculty  subject  hall  exam
+availability  allocation  dutychart  swap  substitute  analytics  report  remuneration  audit
+```
+
+Rules:
+- Controllers are thin: map DTO ⇄ service call. No business logic, no repositories.
+- Services own transactions (`@Transactional` on service methods) and business rules.
+- Entities never leave the service layer; controllers return DTO records.
+- A feature may call another feature's **service**, never its repository.
+- `allocation/engine` is **pure Java** (no Spring, no JPA): it takes an immutable problem snapshot
+  and returns a result. This keeps it deterministic and unit-testable. See ALLOCATION_ENGINE.md.
+
+No Lombok, no MapStruct: Java records cover DTOs, and explicit mapping is short and greppable.
+
+---
+
+## 2. Technology versions
+
+| Area | Choice | Notes |
+|---|---|---|
+| Java | **21 LTS** (Temurin) | Brief allows 17+; 21 gives records/pattern matching/virtual threads and longer support. |
+| Spring Boot | **3.5.16** | Last 3.x line, as mandated. See risk R1. |
+| Build | Maven via wrapper (Maven 3.9.16) | No local Maven install needed: `./mvnw`. |
+| JWT | Spring Security OAuth2 Resource Server (Nimbus) | Validation and issuance from the Spring stack; no extra JWT library. |
+| DB migrations | Flyway (Boot-managed 11.x) + `flyway-database-postgresql` | |
+| DB | PostgreSQL 17 (Supabase; local via Docker) | |
+| API docs | springdoc-openapi 2.8.17 | `/swagger-ui.html`; `/v3/api-docs` imports straight into Postman. |
+| Tests (BE) | JUnit 5, Mockito, Spring Boot Test, Testcontainers (PostgreSQL 17) | Integration tests skip when Docker is not running; CI always runs them. |
+| Reports (Developer 2) | OpenPDF 2.4.0, Apache POI 5.5.1, Commons CSV 1.14.1 | Versions pinned in `pom.xml` properties; add the deps when the report module is built. |
+| Node | 24 | |
+| Frontend | React 19, Vite 8, TypeScript 7, Tailwind CSS 4 | |
+| Routing / HTTP | React Router 8, Axios 1.x | |
+| Forms | React Hook Form 7 + Zod 4 (`@hookform/resolvers`) | |
+| Server state | **TanStack Query 5** (added) | See §8. |
+| Icons / charts | Lucide React, Recharts 3 | |
+| Tests (FE) | Vitest 5, React Testing Library, jsdom | |
+| Lint (FE) | oxlint (Vite template default) | |
+
+---
+
+## 3. Multi-tenancy
+
+**Model: shared database, shared schema, `college_id` discriminator column on every tenant-owned table.**
+
+Alternatives rejected: schema-per-college (migrations × N, connection routing, Supabase pooler
+limits) and database-per-college (cost, ops). A discriminator is the standard choice at this scale,
+*provided enforcement is layered*. Invigilo uses five layers:
+
+1. **Tenant identity comes only from the signed JWT.** At login the server resolves the user's
+   `college_membership` and writes `cid` (college id) and `roles` into the token. The API never
+   reads a college id from a path, query string or body for authorization. There is no
+   `/colleges/{id}/...` in the URL space.
+2. **Request-scoped `TenantContext`.** A filter after JWT authentication puts `cid` into a
+   request-scoped holder. Non-authenticated flows (login, college registration) run without a tenant
+   and must not touch tenant tables except through dedicated, reviewed code paths.
+3. **Hibernate `@TenantId` discriminator.** Tenant-owned entities extend a `TenantScopedEntity`
+   mapped superclass whose `collegeId` field is annotated `@TenantId`; a
+   `CurrentTenantIdentifierResolver` reads `TenantContext`. Hibernate then adds
+   `college_id = :tenant` to HQL/Criteria queries and sets the column on insert automatically.
+   - It does **not** apply to native SQL. Native queries must include `college_id` explicitly; this
+     is a code-review rule.
+   - **Developer 1, first tenancy task:** prove with an integration test that `findById` of another
+     college's row returns empty. If the Hibernate version in use does not filter id lookups,
+     use explicit `findByIdAndCollegeId` repository methods instead and note it here.
+4. **Same-tenant foreign keys in the database.** Every tenant table has `unique (college_id, id)`,
+   and child tables reference parents with composite FKs, e.g.
+   `foreign key (college_id, department_id) references department (college_id, id)`.
+   This makes "faculty of college A in a department of college B" impossible even if code is wrong.
+5. **Not-found, not forbidden.** A request for another college's resource returns **404**, so ids
+   cannot be probed. UUID primary keys (not sequential) avoid enumeration.
+
+A `TenantIsolationIntegrationTest` suite (two colleges, user of A attempts read/update/delete/
+reference of B's data for every resource) is part of the definition of done for each new resource.
+
+**Supabase-specific:** Supabase auto-exposes the `public` schema through its REST Data API. All
+Invigilo tables live in a dedicated **`invigilo`** schema, which is not exposed. Never add it to
+Supabase's "Exposed schemas" and never create Invigilo tables in `public`. The Spring Boot API is
+the only way to the data.
+
+---
+
+## 4. Authentication and authorization
+
+Supabase Auth is not used (per brief). Invigilo owns identity:
+
+- `app_user` — global login identity: email (unique, case-insensitive), BCrypt password hash,
+  name, status. A person can, in principle, belong to more than one college.
+- `college_membership` — `(user, college, roles, department_id for HOD, faculty_id link)`.
+  Roles: `EXAM_CELL_ADMIN`, `HOD`, `FACULTY` (a user may hold several within one college, e.g. HOD + FACULTY).
+- `faculty` is a college's *staff record* and can exist without a login. An admin can later invite
+  the faculty member, which creates/links an `app_user` and membership.
+
+Tokens:
+- **Access token**: HS256 JWT, 15 min, claims `sub` (user id), `cid`, `roles`, `mid` (membership id),
+  `iss=invigilo`. Kept **in memory** in the SPA (never localStorage).
+- **Refresh token**: random 256-bit opaque value, stored **hashed** in `refresh_token` table,
+  rotated on every use, revocable, delivered as `HttpOnly; Secure; SameSite=Strict` cookie scoped to
+  `/api/v1/auth`. Refresh re-checks that the membership is still active, so revocation takes effect
+  within one access-token lifetime.
+- A user with several memberships picks a college at login; the token is per college.
+
+Already in place (`config/SecurityConfig.java`): stateless chain, JWT validation (signature,
+expiry, issuer), `roles` → `ROLE_*` authorities, BCrypt encoder, CORS from config, fail-fast
+if `JWT_SECRET` is missing or shorter than 32 chars. Developer 1 adds token issuance, refresh,
+`TenantContext`, and login endpoints.
+
+Authorization is two-level:
+- **Role** checks with `@PreAuthorize("hasRole('EXAM_CELL_ADMIN')")` on service or controller methods.
+- **Scope** checks in services: HOD queries are restricted to `membership.departmentId`;
+  FACULTY queries to `membership.facultyId`. Never rely on the frontend hiding a button.
+
+---
+
+## 5. Data model (target schema)
+
+Developer 1 creates these through Flyway migrations as features land. Columns listed are the
+important ones, not exhaustive. All tenant tables: `id uuid pk`, `college_id`, `created_at`,
+`updated_at`, `unique (college_id, id)`.
+
+**Platform / identity**
+- `college` — code (unique), name, affiliation, address, academic_year label, time_zone
+  (default `Asia/Kolkata`), status (`ONBOARDING`, `ACTIVE`, `SUSPENDED`), onboarding_completed_at.
+- `app_user`, `college_membership`, `refresh_token`.
+
+**Policy (versioned)**
+- `college_policy` — college_id, version (int), settings `jsonb`, created_by, created_at,
+  `unique (college_id, version)`. Settings are a typed Java record (`PolicySettings`) serialized to
+  JSONB and validated with Bean Validation; JSONB because policy options will grow and are always
+  read as a whole. **Every edit creates a new version**; allocation runs and duty charts store the
+  `policy_id` they were built with, which is how *"changing rules must not silently modify published
+  charts"* is guaranteed. The full catalogue of settings is in ALLOCATION_ENGINE.md §3.
+
+**Academic**
+- `department` — code, name. `unique (college_id, code)`.
+- `faculty` — department, employee_code, full_name, email, phone, designation,
+  `employment_type` (`REGULAR`, `VISITING`, `GUEST`...), seniority_rank or joining_date,
+  chief_eligible (bool), duty_weight (numeric, default 1.0, for reduced-load faculty), active.
+- `faculty_subject` — which subjects a faculty member teaches (drives the *own-subject* rule).
+- `faculty_restriction` — per-faculty hard restrictions: type (`EXCLUDE_HALL`, `EXCLUDE_DEPARTMENT_EXAMS`,
+  `MAX_DUTIES`, `NOT_CHIEF`...), value, reason.
+- `subject` — department, code, name, semester/programme.
+- `hall` — code, name, building, capacity, min_invigilators, is_lab, active.
+
+**Examinations**
+- `exam_period` — name (e.g. "Nov 2026 End Semester"), start/end date, status (`PLANNING`,
+  `ALLOCATING`, `PUBLISHED`, `CLOSED`).
+- `exam_session` — period, date, label (`FN`/`AN`/custom), start_time, end_time.
+  Overlap is computed from **time ranges**, not labels, so colleges with 3 sessions or long practicals work.
+- `exam` — period, session, subject, exam_type (`THEORY`, `PRACTICAL`), duration.
+- `session_hall` — session, hall, required_invigilators (computed, admin-overridable),
+  requires_chief, override_reason. **This is the unit of duty**, not `(exam, hall)`.
+- `hall_seating` — session_hall, exam, student_count. A hall may seat **several exams in the same
+  session** (common mixed seating). Subject/department restrictions consider *all* exams in the hall.
+  Validation: sum(student_count) ≤ hall.capacity; an exam's halls belong to the exam's session.
+
+**Availability**
+- `availability_request` — faculty, date, session (null = whole day), type (`LEAVE`,
+  `UNAVAILABLE`), reason, status (`PENDING`, `APPROVED`, `REJECTED`, `CANCELLED`), reviewed_by/at.
+  If policy says no approval is needed, requests are created `APPROVED`.
+- `availability_override` — admin override of an approved unavailability for a specific session,
+  with mandatory reason (audited).
+
+**Allocation and charts**
+- `allocation_run` — period, policy_id, status, started/finished, input hash, stats `jsonb`,
+  unfilled count, created_by. One row per "Generate" click.
+- `duty_chart` — period, version, status (`DRAFT`, `PUBLISHED`, `SUPERSEDED`), policy_id,
+  allocation_run_id, published_by/at. At most one DRAFT and one PUBLISHED per period
+  (partial unique indexes).
+- `duty_assignment` — chart, session_hall, faculty, role (`CHIEF`, `INVIGILATOR`),
+  source (`AUTO`, `MANUAL`, `SWAP`, `SUBSTITUTE`), explanation `jsonb`, status
+  (`ASSIGNED`, `COMPLETED`, `ABSENT`, `CANCELLED`).
+  DB guard: `unique (chart_id, session_hall_id, faculty_id)`; the cross-session double-booking rule
+  is enforced by the shared validator (time overlap cannot be a simple unique index).
+- `unfilled_position` — chart, session_hall, role, reason `jsonb` (from the engine).
+
+Lifecycle: a DRAFT is freely editable (every edit validated). Publishing freezes it as a version.
+After publishing, assignments change only through controlled workflows (swap, substitute, admin
+reassignment) — each runs the same validator and writes `audit_log`. A larger rework goes through a
+new DRAFT version that supersedes the published one on publish.
+
+**Workflows (Developer 2)**
+- `swap_request` — requester assignment, target faculty (+ their assignment for a two-way swap),
+  status machine (`PENDING_RECIPIENT` → `PENDING_HOD` → `APPROVED`/`REJECTED`/`CANCELLED`/`INVALIDATED`).
+- `remuneration_rate` — role, exam_type/session type, amount, currency, effective_from/to.
+
+**Audit**
+- `audit_log` — append-only: college_id, actor_user_id, action, entity_type, entity_id,
+  before `jsonb`, after `jsonb`, reason, occurred_at. Written in the same transaction as the change.
+
+---
+
+## 6. API conventions
+
+- Base path `/api/v1`. JSON. Resource-oriented REST; workflow transitions are explicit action
+  endpoints (`POST /duty-charts/{id}/publish`, `POST /swap-requests/{id}/accept`).
+- IDs are UUIDs. Dates `YYYY-MM-DD`, times `HH:mm`, instants ISO-8601 UTC.
+- **No `collegeId` anywhere in requests.** Tenant is the token's `cid`.
+- Lists: `?page=0&size=50&sort=name,asc` → Spring `Page` mapped to `{ items, page, size, total }`.
+- Errors: RFC 9457 `application/problem+json` with `code` (stable, e.g. `FACULTY_NOT_FOUND`) and
+  `fieldErrors` for validation (already implemented in `common/error`).
+  400 validation · 401 unauthenticated · 403 wrong role · 404 missing *or other tenant* ·
+  409 state conflict · 422 business-rule violation.
+- Optimistic locking (`@Version`) on editable aggregates (policy, draft chart, assignments) to stop
+  two admins overwriting each other; 409 on conflict.
+
+## 7. Validation strategy
+
+Three layers, each with a different purpose:
+1. **Frontend (Zod)** — instant feedback. Never trusted.
+2. **Backend DTOs (Jakarta Bean Validation)** — shape and ranges. Business rules in **services**.
+   Allocation/assignment rules in the **shared constraint validator** (ALLOCATION_ENGINE.md §5),
+   used by generation, manual edit, swap and substitute alike, so the rules cannot drift.
+3. **Database constraints** — not-null, checks, uniques, composite tenant FKs. Last line of defence.
+
+## 8. Frontend architecture
+
+- `features/<name>/` holds pages, components, `api.ts` (Axios calls + TanStack Query hooks) and Zod schemas.
+- **Server state: TanStack Query** (added beyond the mandated list). Almost every screen is
+  server data: caching, refetch after mutation (`invalidateQueries`), loading/error states and
+  request de-duplication would otherwise be re-implemented per page. Axios remains the HTTP layer.
+- **Client state**: React context for auth/session only; component state elsewhere. No Redux.
+- Forms: React Hook Form + Zod resolver; backend `fieldErrors` mapped back with `setError`.
+- Routing: role-specific layouts (`/admin`, `/hod`, `/faculty`) behind a guard that reads roles from
+  the session. Guards are UX only.
+- Dev: Vite proxies `/api` to `:8080` (no CORS locally). Prod: `VITE_API_BASE_URL`.
+
+## 9. Testing strategy
+
+| Layer | Tool | What |
+|---|---|---|
+| Allocation engine | JUnit 5 (pure unit) | Every hard constraint, determinism (run twice → identical), unfilled explanations, fairness bounds, scale test (≈300 faculty × 60 sessions × 25 halls < 5 s). |
+| Services | JUnit 5 + Mockito | Business rules, state machines (swap, publish). |
+| Web/security | `@WebMvcTest` + `spring-security-test` | 401/403 per role, validation → ProblemDetail. |
+| Persistence & tenancy | `@SpringBootTest` + Testcontainers PostgreSQL 17 | Flyway migrations, tenant isolation, transactional swap. |
+| Frontend | Vitest + RTL | Forms, conflict display in editor, role guards. |
+
+Integration tests use `@Testcontainers(disabledWithoutDocker = true)`: they skip locally without
+Docker and **always run in CI** (`.github/workflows/ci.yml`). Do not mark work done if they were skipped
+locally and CI has not run.
+
+## 10. Database connectivity (Supabase)
+
+- JDBC URL from Supabase *Connect → Session pooler* (`aws-0-<region>.pooler.supabase.com:5432`,
+  user `postgres.<project-ref>`, `sslmode=require`). The *direct* connection is IPv6-only unless the
+  IPv4 add-on is enabled. **Do not use the transaction pooler (port 6543)**: it breaks server-side
+  prepared statements and Flyway's session-level locking.
+- Hikari pool kept small (`DB_POOL_SIZE`, default 5) because Supabase limits pooler clients.
+- Credentials only via env vars / `backend/.env` (git-ignored). Use separate Supabase projects (or at
+  least separate databases) for dev and production.
+- Local alternative: `docker compose up -d` (PostgreSQL 17) — same schema, same migrations.
+
+## 11. Technical risks
+
+| # | Risk | Mitigation |
+|---|---|---|
+| R1 | Spring Boot 3.5 is the final 3.x line; open-source support ends before 4.x does. | Mandated 3.x kept. Avoid deprecated APIs so a later move to Boot 4 is mechanical; decide with product owner before production launch. |
+| R2 | Cross-tenant data leak. | Five enforcement layers (§3) + isolation test suite per resource. |
+| R3 | Greedy allocation leaves positions unfilled that a global solver could fill. | Per-session optimal matching, scarcity look-ahead and a bounded repair pass (ALLOCATION_ENGINE.md); clear explanations for any remaining gaps. |
+| R4 | Rules drift between generator, manual editor, swaps and substitutes. | Single shared constraint validator used by all four. |
+| R5 | Concurrent edits (two admins, swap during edit). | `@Version` optimistic locking; swap re-validates inside the transaction; `SELECT … FOR UPDATE` on assignments being swapped. |
+| R6 | Time zones (UTC server vs local exam calendar). | Exam dates/times stored as local `date`/`time` + college `time_zone`; instants as `timestamptz` UTC. |
+| R7 | Supabase connection limits / IPv6. | Session pooler, small pool (§10). |
+| R8 | Excel/PDF generation memory for large charts. | POI `SXSSFWorkbook` streaming; stream responses. |
+| R9 | Data API exposure of tables. | Dedicated `invigilo` schema, not exposed (§3). |

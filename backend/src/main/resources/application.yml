@@ -68,5 +68,8 @@ invigilo:
       secret: ${JWT_SECRET:}
       issuer: invigilo
       access-token-ttl: ${JWT_ACCESS_TOKEN_TTL:PT15M}
+    refresh:
+      ttl: ${REFRESH_TOKEN_TTL:P14D}
+      cookie-secure: ${REFRESH_COOKIE_SECURE:true}
     cors:
       allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}

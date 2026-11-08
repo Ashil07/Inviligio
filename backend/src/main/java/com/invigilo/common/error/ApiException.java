@@ -31,6 +31,16 @@ public class ApiException extends RuntimeException {
         return new ApiException(HttpStatus.NOT_FOUND, code, message);
     }
 
+    /** 401. Bad credentials or an unusable refresh token. */
+    public static ApiException unauthorized(String code, String message) {
+        return new ApiException(HttpStatus.UNAUTHORIZED, code, message);
+    }
+
+    /** 403. Authenticated, but not allowed (wrong role, disabled account, no membership). */
+    public static ApiException forbidden(String code, String message) {
+        return new ApiException(HttpStatus.FORBIDDEN, code, message);
+    }
+
     /** 409. State conflicts such as duplicate codes or publishing a chart with blocking errors. */
     public static ApiException conflict(String code, String message) {
         return new ApiException(HttpStatus.CONFLICT, code, message);

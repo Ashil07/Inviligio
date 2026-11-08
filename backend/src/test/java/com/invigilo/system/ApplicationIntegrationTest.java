@@ -2,33 +2,18 @@ package com.invigilo.system;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.invigilo.support.IntegrationTest;
 import com.invigilo.system.SystemStatusService.SystemStatus;
+import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.web.client.TestRestTemplate;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.http.HttpStatus;
-import org.springframework.test.context.ActiveProfiles;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
-/**
- * Boots the full application against a real PostgreSQL (same major version as Supabase),
- * runs Flyway and checks the public status endpoint. Skipped when Docker is not running.
- */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@ActiveProfiles("test")
-@Testcontainers(disabledWithoutDocker = true)
-class ApplicationIntegrationTest {
-
-    @Container
-    @ServiceConnection
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:17-alpine");
+/** Boots the full application against real PostgreSQL, runs Flyway and checks the public status endpoint. */
+class ApplicationIntegrationTest extends IntegrationTest {
 
     @Autowired
-    TestRestTemplate http;
+    Flyway flyway;
 
     @Test
     void bootsMigratesAndReportsDatabaseUp() {
@@ -37,12 +22,14 @@ class ApplicationIntegrationTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().database().status()).isEqualTo("UP");
-        assertThat(response.getBody().database().schemaVersion()).isEqualTo("1");
+        assertThat(response.getBody().database().schemaVersion())
+                .isEqualTo(flyway.info().current().getVersion().getVersion());
+        assertThat(flyway.info().pending()).isEmpty();
     }
 
     @Test
     void protectedEndpointsRequireAuthentication() {
-        assertThat(http.getForEntity("/api/v1/faculty", String.class).getStatusCode())
+        assertThat(http.getForEntity("/api/v1/auth/me", String.class).getStatusCode())
                 .isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 }

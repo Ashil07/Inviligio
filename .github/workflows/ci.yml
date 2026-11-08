@@ -18,7 +18,7 @@ jobs:
           distribution: temurin
           java-version: '21'
           cache: maven
-      # Docker is available on ubuntu runners, so Testcontainers integration tests run here.
+      # Integration tests start an embedded PostgreSQL 17; no service container needed.
       - run: ./mvnw -B verify
 
   frontend:

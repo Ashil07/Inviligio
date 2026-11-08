@@ -14,7 +14,7 @@ Developer 1's actual code; nothing is rebuilt. No AI subagents or parallel agent
 5. Commit with Conventional Commits (`feat(faculty): add bulk CSV import`). The graphify
    post-commit hook rebuilds the graph after each commit.
 6. Push, open a PR into `main`. CI (`.github/workflows/ci.yml`) must be green — it runs the
-   Testcontainers integration tests that may have been skipped locally.
+   integration tests (embedded PostgreSQL, no Docker needed).
 7. Squash-merge. Keep `main` always runnable.
 
 New Flyway migration = new file `V<next>__<description>.sql`. Never edit a migration that has been
@@ -25,7 +25,7 @@ merged. If two branches race for the same number, the later one renumbers before
 - Backend: entity + migration, service with business rules, controller with DTO records, Bean
   Validation, `@PreAuthorize` role checks, service-level scope checks (HOD/FACULTY).
 - Tests: service unit tests; web-layer tests for 401/403/validation; **tenant isolation test** for
-  every new tenant resource; Testcontainers test for anything with non-trivial SQL.
+  every new tenant resource; `IntegrationTest` (embedded PostgreSQL) for anything with non-trivial SQL.
 - Frontend: real API calls (no mocks in app code), loading/error/empty states, Zod form validation,
   backend `fieldErrors` shown on fields, role-appropriate navigation, at least one RTL test for
   forms or non-trivial logic.
@@ -38,8 +38,8 @@ merged. If two branches race for the same number, the later one renumbers before
 | # | Milestone | Scope / acceptance |
 |---|---|---|
 | M0 | Foundation | **Done in initialization.** Builds, security skeleton, error format, status endpoint, CI, docs. |
-| M1 | Auth & tenancy | `college`, `app_user`, `college_membership`, `refresh_token` migrations; register/login/refresh/logout/`me`; `TenantContext` + `@TenantId` base entity; composite tenant FKs; tenant-isolation test harness. FE: login page, in-memory session, Axios 401→refresh→retry, role layouts. |
-| M2 | College onboarding & policy | College registration creates college (`ONBOARDING`) + first EXAM_CELL_ADMIN. Multi-step onboarding wizard (institution → faculty/subject rules → workload → staffing → availability → swaps). `PolicySettings` record, versioned `college_policy`, edit page with HARD/SOFT/OFF modes. |
+| M1 | Auth & tenancy | **Done.** `college`, `app_user`, `college_membership`, `refresh_token` migrations; register-college/login/refresh/logout/`me`; `TenantContext` + `@TenantId` base entity; tenant-isolation test harness. FE: login (with college picker), college registration, in-memory session, Axios 401→refresh→retry, role areas and guards. |
+| M2 | College onboarding & policy | (Basic registration already done in M1.) Add institution details to `college` (affiliation, address, academic year). Multi-step onboarding wizard (institution → faculty/subject rules → workload → staffing → availability → swaps). `PolicySettings` record, versioned `college_policy`, edit page with HARD/SOFT/OFF modes. |
 | M3 | Departments, subjects, halls | CRUD, uniqueness per college, deactivate instead of delete when referenced. |
 | M4 | Faculty | CRUD, department, designation, employment type, seniority, chief eligibility, duty weight, subjects taught, restrictions, invite to create login. **Recommended:** CSV import for faculty/subjects/halls (real colleges have hundreds of rows). |
 | M5 | Exam scheduling | Periods, sessions (date + time range), exams, session halls, seating; capacity and consistency validation; computed required invigilators with override. |
@@ -47,6 +47,11 @@ merged. If two branches race for the same number, the later one renumbers before
 | M7 | Allocation engine | Per ALLOCATION_ENGINE.md: pure-Java engine, constraints, solver, repair, final validation, unit tests incl. determinism and scale; `AllocationService` persisting run + DRAFT chart + unfilled positions. |
 | M8 | Basic allocation review | Admin "Generate" action; chart grid (date × session × hall); unfilled positions with funnels and suggestions; workload table; regenerate replaces the draft. |
 | H1 | Handover | Fill in [HANDOVER.md](HANDOVER.md); demo seed data script; all CI green. |
+
+**Database hosting is deferred to Developer 2** (product owner decision, 2026-11-08). Developer 1
+builds and verifies everything against embedded PostgreSQL in tests; nothing requires Supabase or a
+local database server. Developer 2 connects Supabase (ARCHITECTURE.md §10) as the first step of M18,
+or earlier when a running instance is needed for manual testing.
 
 ## 4. Developer 2 — advanced features and completion
 
@@ -61,7 +66,7 @@ merged. If two branches race for the same number, the later one renumbers before
 | M15 | Fairness analytics | From real `duty_assignment` data: per-faculty totals, mean/min/max/std-dev, department comparison, history, unfilled. Recharts. |
 | M16 | Reports | PDF (OpenPDF), Excel (POI, streaming), CSV: full, faculty-, hall-, department-, date-, session-wise charts; workload, fairness, remuneration; filters. |
 | M17 | Remuneration | Rates with effective dates per college; computed from completed duties; department totals. |
-| M18 | Final integration | End-to-end walkthrough per role, security review, performance check on realistic data, deployment notes. |
+| M18 | Final integration | **Connect Supabase** (session pooler, `backend/.env`), run migrations there, end-to-end walkthrough per role, security review, performance check on realistic data, deployment notes. |
 
 ## 5. Open product questions
 

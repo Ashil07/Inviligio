@@ -16,7 +16,7 @@ import org.springframework.validation.annotation.Validated;
  */
 @Validated
 @ConfigurationProperties(prefix = "invigilo.security")
-public record SecurityProperties(@Valid @NotNull Jwt jwt, @Valid @NotNull Cors cors) {
+public record SecurityProperties(@Valid @NotNull Jwt jwt, @Valid @NotNull Refresh refresh, @Valid @NotNull Cors cors) {
 
     public record Jwt(
             @NotBlank(message = "JWT_SECRET must be set")
@@ -24,6 +24,12 @@ public record SecurityProperties(@Valid @NotNull Jwt jwt, @Valid @NotNull Cors c
             String secret,
             @NotBlank String issuer,
             @NotNull Duration accessTokenTtl) {}
+
+    /**
+     * Refresh-token cookie. {@code cookieSecure} must stay true outside local development
+     * (browsers accept Secure cookies on http://localhost).
+     */
+    public record Refresh(@NotNull Duration ttl, boolean cookieSecure) {}
 
     public record Cors(@NotEmpty List<String> allowedOrigins) {}
 }

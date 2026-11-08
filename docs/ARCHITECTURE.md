@@ -74,7 +74,7 @@ No Lombok, no MapStruct: Java records cover DTOs, and explicit mapping is short 
 | DB migrations | Flyway (Boot-managed 11.x) + `flyway-database-postgresql` | |
 | DB | PostgreSQL 17 (Supabase; local via Docker) | |
 | API docs | springdoc-openapi 2.8.17 | `/swagger-ui.html`; `/v3/api-docs` imports straight into Postman. |
-| Tests (BE) | JUnit 5, Mockito, Spring Boot Test, Testcontainers (PostgreSQL 17) | Integration tests skip when Docker is not running; CI always runs them. |
+| Tests (BE) | JUnit 5, Mockito, Spring Boot Test, zonky embedded-postgres 2.2.2 (PostgreSQL 17.11) | Real PostgreSQL in tests with no Docker and no hosted DB. |
 | Reports (Developer 2) | OpenPDF 2.4.0, Apache POI 5.5.1, Commons CSV 1.14.1 | Versions pinned in `pom.xml` properties; add the deps when the report module is built. |
 | Node | 24 | |
 | Frontend | React 19, Vite 8, TypeScript 7, Tailwind CSS 4 | |
@@ -99,18 +99,25 @@ limits) and database-per-college (cost, ops). A discriminator is the standard ch
    `college_membership` and writes `cid` (college id) and `roles` into the token. The API never
    reads a college id from a path, query string or body for authorization. There is no
    `/colleges/{id}/...` in the URL space.
-2. **Request-scoped `TenantContext`.** A filter after JWT authentication puts `cid` into a
-   request-scoped holder. Non-authenticated flows (login, college registration) run without a tenant
-   and must not touch tenant tables except through dedicated, reviewed code paths.
+2. **Request-scoped `TenantContext`** (`tenant/TenantContext`). `TenantFilter`, placed right after
+   bearer-token authentication in the security chain, puts `cid` into a thread-local and clears it
+   after the request. Flows that run before a tenant exists (registration, login, refresh, logout)
+   use **`SystemTransactions`**, which sets a *system* flag **before** opening the transaction
+   (Hibernate reads the tenant when the session opens) and refuses to nest inside another
+   transaction. Code with neither a tenant nor the system flag resolves to a `NONE` tenant that
+   matches no rows and fails the FK on insert, so it fails closed.
 3. **Hibernate `@TenantId` discriminator.** Tenant-owned entities extend a `TenantScopedEntity`
    mapped superclass whose `collegeId` field is annotated `@TenantId`; a
    `CurrentTenantIdentifierResolver` reads `TenantContext`. Hibernate then adds
    `college_id = :tenant` to HQL/Criteria queries and sets the column on insert automatically.
    - It does **not** apply to native SQL. Native queries must include `college_id` explicitly; this
      is a code-review rule.
-   - **Developer 1, first tenancy task:** prove with an integration test that `findById` of another
-     college's row returns empty. If the Hibernate version in use does not filter id lookups,
-     use explicit `findByIdAndCollegeId` repository methods instead and note it here.
+   - **Verified (Hibernate 6.6.53):** `findById`, JPQL with `join fetch`, `findAll` and `deleteById`
+     are all filtered; another college's row is simply not found
+     (`TenantIsolationIntegrationTest`). Plain `findById` is therefore safe for tenant entities.
+   - The system context is Hibernate's *root tenant* (`isRoot`): no filter, and inserts keep an
+     explicitly assigned `college_id` (`TenantScopedEntity.assignCollege`, allowed only in the
+     system context).
 4. **Same-tenant foreign keys in the database.** Every tenant table has `unique (college_id, id)`,
    and child tables reference parents with composite FKs, e.g.
    `foreign key (college_id, department_id) references department (college_id, id)`.
@@ -148,10 +155,25 @@ Tokens:
   within one access-token lifetime.
 - A user with several memberships picks a college at login; the token is per college.
 
-Already in place (`config/SecurityConfig.java`): stateless chain, JWT validation (signature,
-expiry, issuer), `roles` → `ROLE_*` authorities, BCrypt encoder, CORS from config, fail-fast
-if `JWT_SECRET` is missing or shorter than 32 chars. Developer 1 adds token issuance, refresh,
-`TenantContext`, and login endpoints.
+Implemented in M1 (`auth/`, `identity/`, `tenant/`, `config/SecurityConfig`):
+
+| Endpoint | Auth | Notes |
+|---|---|---|
+| `POST /api/v1/auth/register-college` | public | Creates college (`ONBOARDING`), user, EXAM_CELL_ADMIN membership; signs in. 409 `COLLEGE_CODE_TAKEN` / `EMAIL_TAKEN`. |
+| `POST /api/v1/auth/login` | public | `{email, password, collegeId?}` → `AUTHENTICATED` or `COLLEGE_SELECTION_REQUIRED` with the user's colleges. Unknown email and wrong password give the same 401 and similar timing (dummy BCrypt). |
+| `POST /api/v1/auth/refresh` | cookie | Rotates the refresh token. Reuse of a rotated token after 30 s revokes all of that membership's refresh tokens; within 30 s it is tolerated without rotating (two tabs refreshing at once). |
+| `POST /api/v1/auth/logout` | cookie | Revokes the token, clears the cookie. |
+| `GET /api/v1/auth/me` | bearer | Session as stored now (tenant-filtered lookup). |
+
+Other details: emails stored lower-case, college codes upper-case; passwords 8-72 chars (BCrypt
+limit); a request to a public endpoint that carries an *invalid* bearer token is rejected by Spring
+Security, so the SPA never sends the token to credential endpoints. Suspended colleges and disabled
+users/memberships cannot sign in or refresh.
+
+**Deployment constraint:** the refresh cookie is `SameSite=Strict`, so the SPA and the API must be
+on the **same site** (same registrable domain, e.g. `app.example.edu` + `api.example.edu`), or the
+browser will not send the cookie and sessions will not survive a reload. Login rate limiting is not
+implemented yet (see risks).
 
 Authorization is two-level:
 - **Role** checks with `@PreAuthorize("hasRole('EXAM_CELL_ADMIN')")` on service or controller methods.
@@ -280,12 +302,15 @@ Three layers, each with a different purpose:
 | Allocation engine | JUnit 5 (pure unit) | Every hard constraint, determinism (run twice → identical), unfilled explanations, fairness bounds, scale test (≈300 faculty × 60 sessions × 25 halls < 5 s). |
 | Services | JUnit 5 + Mockito | Business rules, state machines (swap, publish). |
 | Web/security | `@WebMvcTest` + `spring-security-test` | 401/403 per role, validation → ProblemDetail. |
-| Persistence & tenancy | `@SpringBootTest` + Testcontainers PostgreSQL 17 | Flyway migrations, tenant isolation, transactional swap. |
+| Persistence & tenancy | `@SpringBootTest` + embedded PostgreSQL 17 (`support/IntegrationTest`) | Flyway migrations, tenant isolation, transactional swap. |
 | Frontend | Vitest + RTL | Forms, conflict display in editor, role guards. |
 
-Integration tests use `@Testcontainers(disabledWithoutDocker = true)`: they skip locally without
-Docker and **always run in CI** (`.github/workflows/ci.yml`). Do not mark work done if they were skipped
-locally and CI has not run.
+Integration tests extend `support/IntegrationTest`: one embedded PostgreSQL 17 per test JVM
+(zonky ships the binaries as a Maven artifact; no Docker, no Supabase), one cached Spring context,
+a `MutableClock` to move time forward, and `TenantTestSupport` to run repository code as a given
+college. Tests share the database, so create data with unique codes (`TestData`) instead of
+truncating. Swapped from Testcontainers in M1 because the development machines run without Docker;
+the tests still exercise real PostgreSQL, Flyway and Hibernate.
 
 ## 10. Database connectivity (Supabase)
 
@@ -311,3 +336,5 @@ locally and CI has not run.
 | R7 | Supabase connection limits / IPv6. | Session pooler, small pool (§10). |
 | R8 | Excel/PDF generation memory for large charts. | POI `SXSSFWorkbook` streaming; stream responses. |
 | R9 | Data API exposure of tables. | Dedicated `invigilo` schema, not exposed (§3). |
+| R10 | Brute-force login / registration spam. | Not yet mitigated. Add rate limiting (e.g. Bucket4j per IP + per email) before production. |
+| R11 | Cross-site deployment breaks the SameSite=Strict refresh cookie. | Deploy SPA and API on the same site (§4). |

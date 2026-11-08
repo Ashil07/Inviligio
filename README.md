@@ -20,7 +20,8 @@ substitutes, fairness analytics, reports and remuneration. Multi-college (multi-
 
 - Java 21 (Temurin). Maven is **not** required — use the wrapper `./mvnw`.
 - Node 24 + npm.
-- Docker Desktop (for the local database and integration tests) **or** a Supabase project.
+- Nothing else for tests: backend integration tests start an embedded PostgreSQL 17 by themselves.
+- To *run* the app: Docker Desktop (`docker compose up -d`) **or** a Supabase project (connected later, see docs/DEVELOPMENT_PLAN.md).
 - [Graphify](https://pypi.org/project/graphifyy/) CLI: `pip install graphifyy` (or `uv tool install graphifyy`).
 
 ## Run locally
@@ -40,12 +41,12 @@ npm install
 npm run dev
 ```
 
-The home page shows a live system status (API, database, schema version).
+Open http://localhost:5173/register to create a college, or `/status` for API/database status.
 
 ## Test
 
 ```bash
-cd backend && ./mvnw verify                       # unit + web + Testcontainers (needs Docker)
+cd backend && ./mvnw verify                       # unit + web + integration (embedded PostgreSQL)
 cd frontend && npm run lint && npm test && npm run build
 ```
 

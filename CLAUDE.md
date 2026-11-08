@@ -28,7 +28,11 @@ swaps or substitutes. Current state and next milestone: `docs/HANDOVER.md`, `doc
   Form + Zod; no fake/mock-only buttons in app code.
 - QR attendance is out of scope. Do not add it.
 - Do not use subagents / parallel agents to split feature work (project rule).
-- Don't claim something works without running it; say when integration tests were skipped (no Docker).
+- Pre-tenant flows (login, registration, refresh) go through `SystemTransactions`; never set the system
+  context inside an open transaction. New tenant entities extend `TenantScopedEntity`.
+- Integration tests extend `support/IntegrationTest` (embedded PostgreSQL, no Docker). Use unique test data.
+- The hosted database (Supabase) is connected later by Developer 2; don't add a dependency on it.
+- Don't claim something works without running it.
 
 ## graphify
 

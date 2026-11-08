@@ -1,5 +1,8 @@
 package com.invigilo.config;
 
+import com.invigilo.tenant.CurrentUser;
+import com.invigilo.tenant.TenantFilter;
+import com.nimbusds.jose.jwk.source.ImmutableSecret;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import javax.crypto.SecretKey;
@@ -18,10 +21,13 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
+import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.web.cors.CorsConfiguration;
@@ -31,8 +37,8 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 /**
  * Stateless API security.
  *
- * <p>Invigilo issues its own HS256 JWTs (no Supabase Auth). This class only <em>validates</em>
- * bearer tokens; token issuance (login/refresh) is implemented in the auth module.
+ * <p>Invigilo issues its own HS256 JWTs (no Supabase Auth): issued by {@code auth.TokenService},
+ * validated here.
  * Expected claims: {@code sub} = user id, {@code cid} = college id resolved from the user's
  * membership at login, {@code roles} = membership roles (e.g. EXAM_CELL_ADMIN).
  *
@@ -44,10 +50,15 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @EnableConfigurationProperties(SecurityProperties.class)
 public class SecurityConfig {
 
-    public static final String ROLES_CLAIM = "roles";
+    public static final String ROLES_CLAIM = CurrentUser.CLAIM_ROLES;
 
     private static final String[] PUBLIC_ENDPOINTS = {
         "/api/v1/system/status",
+        // Auth flows that run before an access token exists (cookie- or credential-based).
+        "/api/v1/auth/register-college",
+        "/api/v1/auth/login",
+        "/api/v1/auth/refresh",
+        "/api/v1/auth/logout",
         "/actuator/health",
         "/actuator/health/**",
         "/v3/api-docs/**",
@@ -71,6 +82,8 @@ public class SecurityConfig {
                         .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))
                         .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
                 .exceptionHandling(e -> e.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
+                // Tenant context from the token's "cid" claim, for everything after authentication.
+                .addFilterAfter(new TenantFilter(), BearerTokenAuthenticationFilter.class)
                 .build();
     }
 
@@ -78,6 +91,11 @@ public class SecurityConfig {
     SecretKey jwtSigningKey(SecurityProperties properties) {
         byte[] bytes = properties.jwt().secret().getBytes(StandardCharsets.UTF_8);
         return new SecretKeySpec(bytes, "HmacSHA256");
+    }
+
+    @Bean
+    JwtEncoder jwtEncoder(SecretKey jwtSigningKey) {
+        return new NimbusJwtEncoder(new ImmutableSecret<>(jwtSigningKey));
     }
 
     @Bean

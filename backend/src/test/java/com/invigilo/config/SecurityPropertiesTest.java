@@ -22,6 +22,8 @@ class SecurityPropertiesTest {
             .withPropertyValues(
                     "invigilo.security.jwt.issuer=invigilo",
                     "invigilo.security.jwt.access-token-ttl=PT15M",
+                    "invigilo.security.refresh.ttl=P14D",
+                    "invigilo.security.refresh.cookie-secure=true",
                     "invigilo.security.cors.allowed-origins=http://localhost:5173");
 
     @Test

@@ -12,6 +12,9 @@ import { HallsPage } from '@/features/halls/HallsPage'
 import { ImportPage } from '@/features/importer/ImportPage'
 import { OnboardingWizard } from '@/features/onboarding/OnboardingWizard'
 import { PolicySettingsPage, PolicyVersionPage } from '@/features/policy/PolicySettingsPage'
+import { PeriodDetailPage } from '@/features/schedule/PeriodDetailPage'
+import { PeriodsPage } from '@/features/schedule/PeriodsPage'
+import { SessionPage } from '@/features/schedule/SessionPage'
 import { SubjectsPage } from '@/features/subjects/SubjectsPage'
 import { SystemStatusPage } from '@/features/system/SystemStatusPage'
 import { AdminLayout, AdminPage } from './AdminLayout'
@@ -53,6 +56,9 @@ export const routes: RouteObject[] = [
                       { path: '/admin/departments', element: <DepartmentsPage /> },
                       { path: '/admin/subjects', element: <SubjectsPage /> },
                       { path: '/admin/halls', element: <HallsPage /> },
+                      { path: '/admin/exams', element: <PeriodsPage /> },
+                      { path: '/admin/exams/:periodId', element: <PeriodDetailPage /> },
+                      { path: '/admin/exams/sessions/:sessionId', element: <SessionPage /> },
                       { path: '/admin/faculty', element: <FacultyListPage /> },
                       { path: '/admin/faculty/:id', element: <FacultyDetailPage /> },
                       { path: '/admin/import', element: <ImportPage /> },

@@ -86,7 +86,9 @@ write a Flyway migration that backfills it into every existing `college_policy.s
 **Required positions for a session hall** =
 `max(staffing.minInvigilatorsPerHall, hall.min_invigilators, ceil(total_students / ratio))` where ratio is the practical ratio if any
 seated exam is PRACTICAL, plus one CHIEF position if `chiefInvigilator = PER_HALL` and
-`chiefCountsTowardsStaffing = false`. Admin may override per session hall with a reason.
+`chiefCountsTowardsStaffing = false` (when it is true, one of the required positions is the chief).
+Admin may override per session hall with a reason. A hall with no students needs nobody.
+Implemented in `exam/Staffing.java`; the engine must call it rather than re-implement it.
 
 ## 4. Algorithm
 

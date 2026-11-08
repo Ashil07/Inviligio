@@ -255,16 +255,32 @@ today; faculty → department in M4; session halls → hall in M5), so the ownin
 on the features that point at it.
 
 **Examinations**
-- `exam_period` — name (e.g. "Nov 2026 End Semester"), start/end date, status (`PLANNING`,
-  `ALLOCATING`, `PUBLISHED`, `CLOSED`).
-- `exam_session` — period, date, label (`FN`/`AN`/custom), start_time, end_time.
-  Overlap is computed from **time ranges**, not labels, so colleges with 3 sessions or long practicals work.
-- `exam` — period, session, subject, exam_type (`THEORY`, `PRACTICAL`), duration.
-- `session_hall` — session, hall, required_invigilators (computed, admin-overridable),
-  requires_chief, override_reason. **This is the unit of duty**, not `(exam, hall)`.
+*(Implemented in M5, `exam/`, migration V6.)*
+- `exam_period` — name (unique per college), start/end date (≤ 1 year), status (`PLANNING`,
+  `ALLOCATING`, `PUBLISHED`, `CLOSED`; PLANNING/ALLOCATING are editable, later milestones set the
+  others).
+- `exam_session` — period, date (within the period), label (`FN`/`AN`/custom, unique per date),
+  start_time < end_time. Overlap is computed from **time ranges**, not labels.
+- `exam` — session, subject (once per session), exam_type (`THEORY`, `PRACTICAL`), optional
+  registered_students, notes.
+- `session_hall` — session, hall (once per session), optional required_override with mandatory
+  reason. **This is the unit of duty**, not `(exam, hall)`.
 - `hall_seating` — session_hall, exam, student_count. A hall may seat **several exams in the same
-  session** (common mixed seating). Subject/department restrictions consider *all* exams in the hall.
-  Validation: sum(student_count) ≤ hall.capacity; an exam's halls belong to the exam's session.
+  session** (mixed seating).
+
+Rules enforced by `ScheduleService`: seated total ≤ hall capacity (422 `HALL_OVER_CAPACITY`); an
+exam's seats across halls ≤ its registered students (`EXAM_OVER_SEATED`); seats only for exams of
+that session (`EXAM_NOT_IN_SESSION`); **a hall cannot be used by two overlapping sessions on the
+same date, across all periods** (409 `HALL_BUSY`, also checked when a session's time is changed);
+period dates cannot exclude existing sessions. Warnings (not errors) are returned with the
+session: registered students not seated, exams without halls, halls without students, practical
+exams outside labs. Children are removed with their session/period (`on delete cascade`); halls
+and subjects used in sessions cannot be deleted.
+
+Staffing per session hall is computed by `exam.Staffing.compute` (pure, shared with the engine):
+see ALLOCATION_ENGINE.md §3. Endpoints: `/api/v1/exam-periods[/{id}[/sessions[/bulk]]]`,
+`/api/v1/exam-sessions/{id}[/exams|/halls]`, `/api/v1/exams/{id}`, `/api/v1/session-halls/{id}`.
+Any member can read the timetable; only EXAM_CELL_ADMIN changes it.
 
 **Availability**
 - `availability_request` — faculty, date, session (null = whole day), type (`LEAVE`,

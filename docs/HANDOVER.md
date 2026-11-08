@@ -134,6 +134,29 @@ should use composite FKs to `subject (college_id, id)` and `faculty (college_id,
 
 ---
 
+## M5 Exam scheduling: done  (2026-11-08)
+
+**Built**
+- Migration `V6__exam_schedule`: `exam_period`, `exam_session`, `exam`, `session_hall`,
+  `hall_seating` (composite tenant FKs, cascades from session/period).
+- Backend `exam/`: `ExamPeriodService` (periods, sessions, bulk generation), `ScheduleService`
+  (exams, halls, seating, warnings, session summaries), `Staffing` (pure staffing rule),
+  delete guards for subjects and halls in use.
+- Frontend: `/admin/exams` (periods), `/admin/exams/:periodId` (sessions, add/generate),
+  `/admin/exams/sessions/:sessionId` (exams, halls, seating editor, overrides, warnings).
+
+**Verified**
+- Backend: 116 tests (18 new: staffing rule unit tests; session rules, bulk generation, period
+  date changes, cascade delete, capacity/registration/session checks, hall clashes across
+  overlapping sessions incl. moving a session, overrides, delete guards, roles, isolation).
+- Frontend: 55 tests; lint, typecheck, build clean.
+
+**Not verified**
+- Not exercised in a browser against a running backend (database deferred to Developer 2).
+- No CSV import for the timetable yet (sessions are entered or generated; exams and seating by hand).
+
+---
+
 ## Developer 1 → Developer 2  (date)
 
 **Completed milestones:**  

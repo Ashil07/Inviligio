@@ -83,6 +83,29 @@ test; use `SystemTransactions` only for pre-tenant flows.
 
 ---
 
+## M3 Departments, subjects, halls: done  (2026-11-08)
+
+**Built**
+- Migration `V4__departments_subjects_halls` (composite FK `subject(college_id, department_id)`).
+- Backend packages `department/`, `subject/`, `hall/`; shared `common/persistence` helpers
+  `Codes`, `Versions` (stale-edit check), `UsageCheck<T>` (delete guards); `common/web/PageResponse`.
+- Frontend: `/admin/departments`, `/admin/subjects` (search, department filter, paging),
+  `/admin/halls`; shared `components/ui/layout.tsx` (PageHeader, EditPanel, Table, StatusBadge, RowActions).
+
+**Verified**
+- Backend: 71 tests (16 new, incl. cross-college reads/updates/deletes → 404, cross-college
+  department reference → 404, and the DB itself rejecting a cross-college FK).
+- Frontend: 41 tests; lint, typecheck, build clean.
+
+**Not verified**
+- Not exercised in a browser against a running backend (database deferred to Developer 2).
+- No bulk import yet (planned with M4).
+
+**For M4:** faculty → department must register a `UsageCheck<Department>`; `faculty_subject`
+should use composite FKs to `subject (college_id, id)` and `faculty (college_id, id)`.
+
+---
+
 ## Developer 1 → Developer 2  (date)
 
 **Completed milestones:**  

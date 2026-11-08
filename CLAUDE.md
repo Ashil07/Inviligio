@@ -25,6 +25,9 @@ swaps or substitutes. Current state and next milestone: `docs/HANDOVER.md`, `doc
 - Controllers thin, services own transactions and rules, DTOs are records, entities never leave services.
 - Errors: throw `ApiException` with a stable `code`; the handler emits ProblemDetail.
 - State changes that affect duties call `AuditService.record` inside the same transaction.
+- Editable records: views carry `version`, updates call `Versions.requireUnchanged`. Deleting a referenced
+  row is refused via `UsageCheck<T>` beans; register one when a new table references another.
+- Child tables use composite FKs `(college_id, parent_id) → parent (college_id, id)`.
 - Policy rules: change `PolicySettings` and `features/policy/schema.ts` together, plus a backfill migration.
 - Frontend: server data through TanStack Query hooks in `features/<x>/api.ts`; forms with React Hook
   Form + Zod; no fake/mock-only buttons in app code.

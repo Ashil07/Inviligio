@@ -12,6 +12,9 @@ export function AdminLayout() {
         ]
       : [
           { to: '/admin', label: 'Overview', end: true },
+          { to: '/admin/departments', label: 'Departments', end: false },
+          { to: '/admin/subjects', label: 'Subjects', end: false },
+          { to: '/admin/halls', label: 'Halls', end: false },
           { to: '/admin/settings/college', label: 'College', end: false },
           { to: '/admin/settings/policy', label: 'Policy', end: false },
         ]
@@ -43,7 +46,7 @@ export function AdminLayout() {
 /** Padding/width wrapper for admin pages that are not full-width layouts. */
 export function AdminPage() {
   return (
-    <main className="mx-auto max-w-4xl px-4 py-8">
+    <main className="mx-auto max-w-5xl px-4 py-8">
       <Outlet />
     </main>
   )

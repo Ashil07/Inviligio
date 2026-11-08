@@ -208,15 +208,23 @@ important ones, not exhaustive. All tenant tables: `id uuid pk`, `college_id`, `
   `GET /policy/versions`, `GET /policy/versions/{n}` (admin).
 
 **Academic**
-- `department` — code, name. `unique (college_id, code)`.
+- `department` — code, name, active. `unique (college_id, code)`. *(M3)*
 - `faculty` — department, employee_code, full_name, email, phone, designation,
   `employment_type` (`REGULAR`, `VISITING`, `GUEST`...), seniority_rank or joining_date,
   chief_eligible (bool), duty_weight (numeric, default 1.0, for reduced-load faculty), active.
 - `faculty_subject` — which subjects a faculty member teaches (drives the *own-subject* rule).
 - `faculty_restriction` — per-faculty hard restrictions: type (`EXCLUDE_HALL`, `EXCLUDE_DEPARTMENT_EXAMS`,
   `MAX_DUTIES`, `NOT_CHIEF`...), value, reason.
-- `subject` — department, code, name, semester/programme.
-- `hall` — code, name, building, capacity, min_invigilators, is_lab, active.
+- `subject` — department (composite FK `(college_id, department_id)`), code, name, programme,
+  semester (1-12), active. *(M3)*
+- `hall` — code, name, building, capacity (1-2000), min_invigilators (1-20), is_lab, active. *(M3)*
+
+Codes (department, subject, hall) are accepted in any case, stored upper-case, unique per college,
+and may be edited. Delete is allowed only while nothing references the row; otherwise 409
+`*_IN_USE` and the admin deactivates instead. References are reported through the
+`common/persistence/UsageCheck<T>` beans each referencing feature registers (subjects → department
+today; faculty → department in M4; session halls → hall in M5), so the owning feature never depends
+on the features that point at it.
 
 **Examinations**
 - `exam_period` — name (e.g. "Nov 2026 End Semester"), start/end date, status (`PLANNING`,
@@ -286,8 +294,15 @@ it is idempotent once ACTIVE. `College` is not tenant-filtered, so services load
   `fieldErrors` for validation (already implemented in `common/error`).
   400 validation · 401 unauthenticated · 403 wrong role · 404 missing *or other tenant* ·
   409 state conflict · 422 business-rule violation.
-- Optimistic locking (`@Version`) on editable aggregates (policy, draft chart, assignments) to stop
-  two admins overwriting each other; 409 on conflict.
+- Optimistic locking: list/detail views include `version`; `PUT` requests must send it back
+  (`common/persistence/Versions.requireUnchanged`): missing → 422 `VERSION_REQUIRED`, changed →
+  409 `STALE_UPDATE`. JPA `@Version` additionally guards races inside a request. Policy uses its own
+  `basedOnVersion` (each save is a new row).
+- Malformed path ids (`/departments/not-a-uuid`) and out-of-range query params are 400.
+- Academic endpoints (M3): `/api/v1/departments`, `/api/v1/halls` (full lists, `?includeInactive=`),
+  `/api/v1/subjects` (paged: `q` on code/name with literal `%`/`_`, `departmentId`,
+  `includeInactive`, `page`, `size` ≤ 200). Reads: any member. Writes: EXAM_CELL_ADMIN. Every
+  create/update/delete is audited.
 
 ## 7. Validation strategy
 

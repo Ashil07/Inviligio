@@ -216,8 +216,8 @@ should use composite FKs to `subject (college_id, id)` and `faculty (college_id,
 ## Developer 1 → Developer 2  (2026-11-09)
 
 **Completed milestones:** M0-M8 and H1 (this section). Commits on `main`, one per milestone:
-foundation `a73e147`, M1 `875624f`, M2 `ee8b53f`, M3 `dc558ed`, M4 `9e1dcdc`, M5 `b36fe4e`,
-M6 `b3dab3f`, M7 `9954f70`, M8 `727ec38`, H1 (this commit).
+foundation `42f1bfc`, M1 `c08d89f`, M2 `ddfcc59`, M3 `68cd4e5`, M4 `0f1b975`, M5 `09a7e46`,
+M6 `9c98dce`, M7 `11daf7b`, M8 `c546885`, H1 `9f06ee4`.
 
 **Test status:** backend 144 tests (`./mvnw verify`, embedded PostgreSQL 17, no Docker needed);
 frontend 63 tests (`npm test`), lint and production build clean. **CI has never run**: the

@@ -8,7 +8,17 @@ import { FullPageSpinner } from '@/components/ui/Spinner'
 import { formatDate, hhmm, usePeriod } from '@/features/schedule/api'
 import { toApiProblem } from '@/lib/api/client'
 import { formatDateTime } from '@/lib/forms'
-import { REASON_LABEL, explain, useDutyChart, useGenerateChart, type ChartSession, type DutyChart } from './api'
+import {
+  REASON_LABEL,
+  explain,
+  useChartHistory,
+  useDutyChart,
+  useGenerateChart,
+  type ChartSession,
+  type DutyChart,
+  type Unfilled,
+} from './api'
+import { ChartEditor, type EditTarget } from './ChartEditor'
 
 /** Generate the period's draft duty chart and review it. */
 export function AllocationPage() {
@@ -53,12 +63,49 @@ export function AllocationPage() {
 function ChartReview({ chart }: { chart: DutyChart }) {
   const s = chart.stats
   const unfilledTotal = chart.unfilled.reduce((n, u) => n + u.missing, 0)
+  const editable = chart.status === 'DRAFT'
+  const [editing, setEditing] = useState<EditTarget | null>(null)
+  const edit = editable ? setEditing : undefined
+
+  /** Opens the replace panel for a duty listed as an issue. */
+  function replaceIssue(assignmentId: string) {
+    for (const session of chart.sessions) {
+      for (const hall of session.halls) {
+        const duty = hall.duties.find((d) => d.assignmentId === assignmentId)
+        if (duty) return setEditing({ kind: 'replace', session, hall, duty })
+      }
+    }
+  }
+
   return (
     <div className="space-y-6">
       <p className="text-sm text-slate-600">
-        Draft version {chart.chartVersion}, generated {formatDateTime(chart.generatedAt)}
+        {editable ? 'Draft' : 'Version'} {chart.chartVersion}, generated {formatDateTime(chart.generatedAt)}
         {chart.policyVersion != null ? ` with policy version ${chart.policyVersion}` : ''}.
+        {editable && ' You can change any duty below; every change is checked against the same rules as generation.'}
       </p>
+      {chart.issues.length > 0 && (
+        <div role="alert" className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-900">
+          <p className="flex items-center gap-2 font-medium">
+            <AlertTriangle className="size-4" aria-hidden />
+            {chart.issues.length} dut{chart.issues.length === 1 ? 'y breaks' : 'ies break'} a strict rule now
+          </p>
+          <ul className="mt-2 space-y-1">
+            {chart.issues.map((i) => (
+              <li key={i.assignmentId} className="flex flex-wrap items-center gap-2">
+                <span>
+                  {formatDate(i.date)} {i.sessionLabel} · {i.hallCode}: {i.facultyName} ({i.reasons.map((r) => REASON_LABEL[r] ?? r).join(', ')})
+                </span>
+                {editable && (
+                  <button type="button" className="font-medium text-red-800 underline" onClick={() => replaceIssue(i.assignmentId)}>
+                    Replace
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       {(chart.inputsChanged || chart.policyChanged) && (
         <div role="status" className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
           <Info className="mt-0.5 size-4 shrink-0" aria-hidden />
@@ -100,8 +147,10 @@ function ChartReview({ chart }: { chart: DutyChart }) {
           </ul>
         </Section>
       )}
-      <ChartGrid sessions={chart.sessions} />
+      {editing && <ChartEditor key={JSON.stringify(editing)} chart={chart} target={editing} onDone={() => setEditing(null)} />}
+      <ChartGrid sessions={chart.sessions} unfilled={chart.unfilled} issueIds={new Set(chart.issues.map((i) => i.assignmentId))} onEdit={edit} />
       <Workload chart={chart} />
+      <History periodId={chart.periodId} />
     </div>
   )
 }
@@ -115,12 +164,25 @@ function Stat({ label, value, warn }: { label: string; value: string; warn?: boo
   )
 }
 
-function ChartGrid({ sessions }: { sessions: ChartSession[] }) {
+function ChartGrid({
+  sessions,
+  unfilled,
+  issueIds,
+  onEdit,
+}: {
+  sessions: ChartSession[]
+  unfilled: Unfilled[]
+  issueIds: Set<string>
+  onEdit?: (target: EditTarget) => void
+}) {
   const dates = [...new Set(sessions.map((s) => s.date))]
   const [date, setDate] = useState(dates[0] ?? '')
   const shown = sessions.filter((s) => s.date === date && s.halls.length > 0)
   return (
-    <Section title="Duty chart" description="Click a name to see why that person was chosen.">
+    <Section
+      title="Duty chart"
+      description={onEdit ? 'Click a name to see why that person was chosen. Replace, remove or fill any position.' : 'Click a name to see why that person was chosen.'}
+    >
       <div className="max-w-xs">
         <SelectField label="Date" value={date} onChange={(e) => setDate(e.target.value)} options={dates.map((d) => ({ value: d, label: formatDate(d) }))} />
       </div>
@@ -138,17 +200,57 @@ function ChartGrid({ sessions }: { sessions: ChartSession[] }) {
                 <td className="px-4 py-2">
                   <ul className="space-y-1">
                     {h.duties.map((d) => (
-                      <li key={d.assignmentId}>
-                        <details>
-                          <summary className="cursor-pointer text-slate-800">
+                      <li key={d.assignmentId} className="flex items-start justify-between gap-3">
+                        <details className="min-w-0">
+                          <summary className={`cursor-pointer ${issueIds.has(d.assignmentId) ? 'text-red-700' : 'text-slate-800'}`}>
                             {d.facultyName} <span className="text-slate-500">({d.departmentCode})</span>
                             {d.role === 'CHIEF' && <span className="ml-2 rounded bg-indigo-50 px-1.5 text-xs font-medium text-indigo-700">chief</span>}
+                            {d.source === 'MANUAL' && <span className="ml-2 rounded bg-slate-100 px-1.5 text-xs font-medium text-slate-600">edited</span>}
+                            {issueIds.has(d.assignmentId) && <span className="ml-2 text-xs font-medium">breaks a rule</span>}
                           </summary>
                           <p className="mt-1 text-xs text-slate-600">{explain(d)}</p>
                         </details>
+                        {onEdit && (
+                          <span className="flex shrink-0 gap-2 text-xs">
+                            <button
+                              type="button"
+                              className="font-medium text-indigo-700 hover:underline"
+                              aria-label={`Replace ${d.facultyName} in ${h.hallCode}`}
+                              onClick={() => onEdit({ kind: 'replace', session: s, hall: h, duty: d })}
+                            >
+                              Replace
+                            </button>
+                            <button
+                              type="button"
+                              className="font-medium text-slate-600 hover:underline"
+                              aria-label={`Remove ${d.facultyName} from ${h.hallCode}`}
+                              onClick={() => onEdit({ kind: 'remove', session: s, hall: h, duty: d })}
+                            >
+                              Remove
+                            </button>
+                          </span>
+                        )}
                       </li>
                     ))}
-                    {h.missing > 0 && <li className="text-sm font-medium text-red-700">{h.missing} open</li>}
+                    {unfilled
+                      .filter((u) => u.sessionHallId === h.sessionHallId)
+                      .map((u) => (
+                        <li key={u.role} className="flex items-center justify-between gap-3 text-sm font-medium text-red-700">
+                          <span>
+                            {u.missing} {u.role === 'CHIEF' ? 'chief ' : ''}open
+                          </span>
+                          {onEdit && (
+                            <button
+                              type="button"
+                              className="text-xs font-medium text-indigo-700 hover:underline"
+                              aria-label={`Fill ${u.role === 'CHIEF' ? 'chief ' : ''}position in ${h.hallCode}`}
+                              onClick={() => onEdit({ kind: 'fill', session: s, hall: h, role: u.role })}
+                            >
+                              Fill
+                            </button>
+                          )}
+                        </li>
+                      ))}
                   </ul>
                 </td>
               </tr>
@@ -156,6 +258,31 @@ function ChartGrid({ sessions }: { sessions: ChartSession[] }) {
           </Table>
         </div>
       ))}
+    </Section>
+  )
+}
+
+function History({ periodId }: { periodId: string }) {
+  const history = useChartHistory(periodId)
+  return (
+    <Section title="Edit history" description="Generation and every manual change to this chart, newest first.">
+      {history.isPending && <p className="text-sm text-slate-500">Loading history...</p>}
+      {history.error && <ErrorAlert>{toApiProblem(history.error).detail ?? 'Could not load the history.'}</ErrorAlert>}
+      {history.data?.length === 0 && <p className="text-sm text-slate-500">No changes yet.</p>}
+      {history.data && history.data.length > 0 && (
+        <ol className="space-y-2">
+          {history.data.map((h) => (
+            <li key={h.id} className="text-sm">
+              <p className="text-slate-800">{h.summary}</p>
+              <p className="text-xs text-slate-500">
+                {formatDateTime(h.occurredAt)}
+                {h.actorName ? ` · ${h.actorName}` : ''}
+                {h.reason ? ` · Reason: ${h.reason}` : ''}
+              </p>
+            </li>
+          ))}
+        </ol>
+      )}
     </Section>
   )
 }

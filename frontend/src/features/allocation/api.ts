@@ -19,6 +19,7 @@ export interface Duty {
   role: Role
   source: 'AUTO' | 'MANUAL' | 'SWAP' | 'SUBSTITUTE'
   explanation: Explanation | null
+  version: number
 }
 
 export interface ChartHall {
@@ -58,6 +59,17 @@ export interface WorkloadRow {
   duties: number
   chiefDuties: number
   dutyWeight: number
+  active: boolean
+}
+
+/** A duty that breaks a strict rule now (e.g. leave approved after generation). */
+export interface ChartIssue {
+  assignmentId: string
+  date: string
+  sessionLabel: string
+  hallCode: string
+  facultyName: string
+  reasons: string[]
 }
 
 export interface ChartStats {
@@ -85,6 +97,41 @@ export interface DutyChart {
   sessions: ChartSession[]
   unfilled: Unfilled[]
   workload: WorkloadRow[]
+  issues: ChartIssue[]
+}
+
+export interface Suggestion {
+  facultyId: string
+  code: string
+  name: string
+  departmentCode: string
+  duties: number
+  warnings: string[]
+}
+
+/** The backend's verdict on a change, before it is made. */
+export interface Validation {
+  allowed: boolean
+  blocking: { code: string; message: string }[]
+  warnings: string[]
+  alternatives: Suggestion[]
+}
+
+/** Fill an open position (sessionHallId + role) or give a duty to someone else (replacesAssignmentId). */
+export interface ChangeRequest {
+  sessionHallId: string
+  role: Role
+  facultyId?: string
+  replacesAssignmentId?: string
+}
+
+export interface HistoryEntry {
+  id: string
+  occurredAt: string
+  action: 'DUTY_CHART_GENERATED' | 'DUTY_ASSIGNED' | 'DUTY_REPLACED' | 'DUTY_REMOVED' | string
+  actorName: string | null
+  summary: string
+  reason: string | null
 }
 
 /** Plain-language labels for the engine's reasons (backend `Reason`). */
@@ -102,6 +149,7 @@ export const REASON_LABEL: Record<string, string> = {
   MAX_CONSECUTIVE_SESSIONS: 'consecutive-session limit',
   MAX_CONSECUTIVE_DAYS: 'consecutive-day limit',
   MAX_PER_PERIOD: 'period duty limit reached',
+  FACULTY_INACTIVE: 'no longer active',
 }
 
 const key = (periodId: string) => ['duty-chart', periodId] as const
@@ -132,6 +180,52 @@ export function useGenerateChart(periodId: string) {
       void queryClient.invalidateQueries({ queryKey: ['schedule'] })
     },
   })
+}
+
+/** Checks a change without making it; re-runs whenever the request changes. */
+export function useValidateChange(periodId: string, request: ChangeRequest | null) {
+  return useQuery({
+    queryKey: [...key(periodId), 'validate', request] as const,
+    queryFn: async () => (await api.post<Validation>(`/exam-periods/${periodId}/duty-chart/assignments/validate`, request)).data,
+    enabled: request !== null,
+    staleTime: 0,
+  })
+}
+
+export function useChartHistory(periodId: string, enabled = true) {
+  return useQuery({
+    queryKey: [...key(periodId), 'history'] as const,
+    queryFn: async () => (await api.get<HistoryEntry[]>(`/exam-periods/${periodId}/duty-chart/history`)).data,
+    enabled,
+  })
+}
+
+/** Every chart edit returns the refreshed chart; validations and history are then out of date. */
+function useChartEdit<T>(periodId: string, send: (input: T) => Promise<DutyChart>) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: send,
+    onSuccess: (chart) => {
+      queryClient.setQueryData(key(periodId), chart)
+      void queryClient.invalidateQueries({ queryKey: [...key(periodId), 'validate'] })
+      void queryClient.invalidateQueries({ queryKey: [...key(periodId), 'history'] })
+    },
+  })
+}
+
+export function useAddDuty(periodId: string) {
+  return useChartEdit(periodId, async (body: { sessionHallId: string; role: Role; facultyId: string; reason?: string }) =>
+    (await api.post<DutyChart>(`/exam-periods/${periodId}/duty-chart/assignments`, body)).data)
+}
+
+export function useReplaceDuty(periodId: string) {
+  return useChartEdit(periodId, async ({ assignmentId, ...body }: { assignmentId: string; facultyId: string; version: number; reason?: string }) =>
+    (await api.put<DutyChart>(`/exam-periods/${periodId}/duty-chart/assignments/${assignmentId}`, body)).data)
+}
+
+export function useRemoveDuty(periodId: string) {
+  return useChartEdit(periodId, async ({ assignmentId, version, reason }: { assignmentId: string; version: number; reason?: string }) =>
+    (await api.delete<DutyChart>(`/exam-periods/${periodId}/duty-chart/assignments/${assignmentId}`, { params: { version, reason } })).data)
 }
 
 export function explain(d: Duty): string {

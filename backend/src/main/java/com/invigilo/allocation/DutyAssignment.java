@@ -62,6 +62,20 @@ public class DutyAssignment extends TenantScopedEntity {
         this.explanation = explanation;
     }
 
+    /** A duty placed by hand in the chart editor; it has no engine explanation. */
+    static DutyAssignment manual(UUID chartId, SessionHall sessionHall, Faculty faculty, AllocationResult.Role role) {
+        DutyAssignment d = new DutyAssignment(chartId, sessionHall, faculty, role, null);
+        d.source = Source.MANUAL;
+        return d;
+    }
+
+    /** Gives this duty to someone else (chart editor). */
+    void reassign(Faculty to) {
+        this.faculty = to;
+        this.source = Source.MANUAL;
+        this.explanation = null;
+    }
+
     public UUID getChartId() { return chartId; }
     public SessionHall getSessionHall() { return sessionHall; }
     public Faculty getFaculty() { return faculty; }

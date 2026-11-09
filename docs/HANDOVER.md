@@ -306,3 +306,51 @@ Hyper-V reserved ranges, so it picks a free port for the database automatically.
 
 **Suggested first task for Developer 2:** M9, starting with the shared single-assignment
 validator described above, then the editor UI on top of `AllocationPage`.
+
+---
+
+## Developer 2 — first day and M9 Duty chart editor  (2026-11-09)
+
+**First day**
+- Cloned, installed graphify and built the graph (`graphify update .`). The git hook is not
+  installed yet (`graphify hook install`, run it yourself once per clone).
+- Ran the app locally with `LocalDevApplication` + demo data and clicked through every admin, HOD
+  and faculty page against the real API: all load. One bug found and fixed on branch
+  `fix/availability-sessions-query`: the leave form requested `/exam-periods//sessions` before a
+  period was chosen (400).
+- CI on GitHub still not checked. Supabase still not connected (M18).
+
+**M9 built** (branch `feat/allocation-chart-editor`, no migration)
+- Engine: `engine/ChartChecker` reuses the engine's `Run` for single-change checks, ranked
+  alternatives, whole-chart violations and open-position explanations (ALLOCATION_ENGINE.md §5).
+  `Reason.singular()` gives one-person wording. The generator's final validation now uses the same
+  `violations()` method.
+- Backend: `ChartEditService` + endpoints on `AllocationController` (ARCHITECTURE.md "Manual
+  editing"): validate, add to an open position, replace, remove, history. Draft row locked per edit,
+  duty `version` checked, every change audited. `ChartView` gained `issues`, live `stats`,
+  `DutyView.version`, `WorkloadRow.active`. `PolicyService.find(id)`.
+- Frontend: `features/allocation/ChartEditor.tsx` (replace / fill / remove panels with suggestions,
+  live rule check, reason) and on `AllocationPage`: Replace/Remove/Fill buttons, "edited" badge,
+  issues banner with a Replace shortcut, edit history. No editing on non-draft charts.
+
+**Verified**
+- Backend: 155 tests (`./mvnw verify`), 11 new (6 `ChartCheckerTest`, 5 `ChartEditIntegrationTest`:
+  blocking rules and alternatives, replace/stale edit, remove/fill with unfilled bookkeeping,
+  leave-after-generation issue, roles and cross-college isolation).
+- Frontend: 68 tests (5 new), lint, typecheck and build clean.
+- In the browser against the running backend with demo data: blocked choice (busy at that time),
+  replace with reason, remove then fill, history entries. A crash only a real browser shows
+  (`scrollIntoView` returning a Promise inside `useEffect`) was found this way and fixed.
+
+**Not done / known limits**
+- `availability_override` (exam cell overriding approved leave for one session) is still not built;
+  the editor simply blocks people on leave.
+- Adding a person beyond a hall's requirement is refused (`POSITION_NOT_OPEN`); raise the
+  requirement on the session page and generate again instead.
+- Validation and alternatives ignore look-ahead scarcity (generation-only); they rank by the same
+  soft costs otherwise.
+- Tip: VS Code's Java extension compiles into `backend/target` too and can leave broken test
+  classes ("Unresolved compilation problems"); delete the class or run `./mvnw clean` if that happens.
+
+**Next:** M10 review and publish (use `ChartChecker.violations()` / `ChartView.issues` to block
+publishing).

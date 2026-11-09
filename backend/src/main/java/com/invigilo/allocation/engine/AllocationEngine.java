@@ -57,9 +57,16 @@ public final class AllocationEngine {
     /** A seat to fill. {@code index} is the stable order of all positions. */
     record Position(int index, int group, SessionSlot session, HallSlot hall, Role role) {}
 
-    private record Assigned(Candidate candidate, Explanation explanation) {}
+    record Assigned(Candidate candidate, Explanation explanation) {}
 
-    private static final class Run {
+    /** An assignment that breaks hard rules, found by {@link Run#violations()}. */
+    record Violation(Position position, Candidate candidate, List<Reason> reasons) {}
+
+    /**
+     * One allocation or one chart being checked. Package-private so {@link ChartChecker} can reuse
+     * exactly the same hard rules and soft costs as generation.
+     */
+    static final class Run {
         private final PolicySettings policy;
         private final List<SessionSlot> sessions;
         private final List<Candidate> candidates;
@@ -71,6 +78,9 @@ public final class AllocationEngine {
         private final Map<Integer, Assigned> assigned = new HashMap<>();
         private final Map<UUID, List<Position>> duties = new HashMap<>();
         private final Map<Integer, Set<UUID>> groupMembers = new HashMap<>();
+        private final Map<UUID, SessionSlot> sessionOfHall = new HashMap<>();
+        private final Map<UUID, HallSlot> hallById = new HashMap<>();
+        private final Map<UUID, Integer> candidateIndex = new HashMap<>();
         private double[][] scarcity;
 
         Run(AllocationProblem problem) {
@@ -85,6 +95,23 @@ public final class AllocationEngine {
                     .sorted(Comparator.comparing(Candidate::code).thenComparing(Candidate::id))
                     .toList();
             candidates.forEach(c -> duties.put(c.id(), new ArrayList<>()));
+            for (int i = 0; i < candidates.size(); i++) candidateIndex.put(candidates.get(i).id(), i);
+            for (SessionSlot s : sessions) {
+                for (HallSlot h : s.halls()) {
+                    sessionOfHall.put(h.id(), s);
+                    hallById.put(h.id(), h);
+                }
+            }
+        }
+
+        /**
+         * Sets up positions and seniority for checking an existing chart. No look-ahead: an edit is
+         * judged on the chart as it is, not on positions still to be filled.
+         */
+        void prepareForChecks() {
+            buildGroupsAndPositions();
+            computeSeniority();
+            scarcity = new double[positionsByGroup.size()][candidates.size()];
         }
 
         AllocationResult execute() {
@@ -367,17 +394,68 @@ public final class AllocationEngine {
             commits.forEach(Runnable::run);
         }
 
-        private void assign(Candidate c, Position p, Explanation why) {
+        void assign(Candidate c, Position p, Explanation why) {
             assigned.put(p.index(), new Assigned(c, why));
             duties.get(c.id()).add(p);
             groupMembers.computeIfAbsent(p.group(), k -> new HashSet<>()).add(c.id());
         }
 
-        private Assigned unassign(Position p) {
+        Assigned unassign(Position p) {
             Assigned a = assigned.remove(p.index());
             duties.get(a.candidate().id()).remove(p);
             groupMembers.get(p.group()).remove(a.candidate().id());
             return a;
+        }
+
+        // ---- lookups for chart checks ----
+
+        Candidate candidate(UUID facultyId) {
+            Integer i = candidateIndex.get(facultyId);
+            return i == null ? null : candidates.get(i);
+        }
+
+        int indexOf(Candidate c) {
+            return candidateIndex.get(c.id());
+        }
+
+        List<Candidate> candidates() {
+            return candidates;
+        }
+
+        boolean knowsHall(UUID sessionHallId) {
+            return hallById.containsKey(sessionHallId);
+        }
+
+        int dutyCount(UUID facultyId) {
+            return duties.get(facultyId).size();
+        }
+
+        Assigned holder(Position p) {
+            return assigned.get(p.index());
+        }
+
+        /** The position {@code facultyId} holds in this hall and role, or null. */
+        Position heldBy(UUID sessionHallId, Role role, UUID facultyId) {
+            for (Position p : duties.getOrDefault(facultyId, List.of())) {
+                if (p.hall().id().equals(sessionHallId) && p.role() == role) return p;
+            }
+            return null;
+        }
+
+        /**
+         * A vacant position of this hall and role. When every seat is taken (or the hall no longer
+         * needs anyone under current staffing), an extra seat is added so the rules can still be
+         * applied to it.
+         */
+        Position vacantPosition(UUID sessionHallId, Role role) {
+            for (Position p : positions) {
+                if (p.hall().id().equals(sessionHallId) && p.role() == role && !assigned.containsKey(p.index())) return p;
+            }
+            SessionSlot s = sessionOfHall.get(sessionHallId);
+            Position extra = new Position(positions.size(), groupOf.get(s.id()), s, hallById.get(sessionHallId), role);
+            positions.add(extra);
+            positionsByGroup.get(extra.group()).add(extra);
+            return extra;
         }
 
         private List<Position> unfilledPositions() {
@@ -456,16 +534,25 @@ public final class AllocationEngine {
 
         /** Every assignment must still pass every hard rule against all the others. */
         private void validate() {
+            List<Violation> found = violations();
+            if (!found.isEmpty()) {
+                Violation v = found.getFirst();
+                throw new IllegalStateException("Allocation produced an invalid assignment (" + v.reasons().getFirst() + ") for "
+                        + v.candidate().code() + " in " + v.position().hall().hallCode() + " on " + v.position().session().date());
+            }
+        }
+
+        /** Each assignment checked against all the others, with every rule it breaks. */
+        List<Violation> violations() {
+            List<Violation> out = new ArrayList<>();
             for (Integer index : new TreeSet<>(assigned.keySet())) {
                 Position p = positions.get(index);
                 Assigned a = unassign(p);
-                List<Reason> rs = reasons(a.candidate(), p, false);
+                List<Reason> rs = reasons(a.candidate(), p, true);
                 assign(a.candidate(), p, a.explanation());
-                if (!rs.isEmpty()) {
-                    throw new IllegalStateException("Allocation produced an invalid assignment (" + rs.getFirst() + ") for "
-                            + a.candidate().code() + " in " + p.hall().hallCode() + " on " + p.session().date());
-                }
+                if (!rs.isEmpty()) out.add(new Violation(p, a.candidate(), List.copyOf(rs)));
             }
+            return out;
         }
 
         // ---- explanations and stats ----
@@ -476,31 +563,33 @@ public final class AllocationEngine {
                 byHallRole.computeIfAbsent(p.hall().id() + "/" + p.role(), k -> new ArrayList<>()).add(p);
             }
             List<Unfilled> out = new ArrayList<>();
-            for (List<Position> group : byHallRole.values()) {
-                Position p = group.getFirst();
-                Map<Reason, Integer> eliminated = new EnumMap<>(Reason.class);
-                Map<Reason, Integer> onlyReason = new EnumMap<>(Reason.class);
-                for (Candidate c : candidates) {
-                    List<Reason> first = reasons(c, p, false);
-                    if (!first.isEmpty()) eliminated.merge(first.getFirst(), 1, Integer::sum);
-                    List<Reason> all = reasons(c, p, true);
-                    if (all.size() == 1 && all.getFirst().configurable()) onlyReason.merge(all.getFirst(), 1, Integer::sum);
-                }
-                List<String> suggestions = new ArrayList<>();
-                onlyReason.entrySet().stream()
-                        .sorted(Map.Entry.<Reason, Integer>comparingByValue().reversed().thenComparing(Map.Entry.comparingByKey()))
-                        .forEach(e -> suggestions.add(e.getValue() + " faculty are blocked only because they "
-                                + e.getKey().description() + "; relaxing that rule in the policy would make them eligible."));
-                if (eliminated.getOrDefault(Reason.BUSY_IN_SESSION, 0) > 0 && onlyReason.isEmpty()) {
-                    suggestions.add("Everyone else who could take it is already on duty at this time; add faculty, "
-                            + "or lower the invigilators needed.");
-                }
-                suggestions.add("Reduce the invigilators required for " + p.hall().hallCode()
-                        + " (manual override on the session page) or seat its students in another hall.");
-                out.add(new Unfilled(p.session().id(), p.hall().id(), p.role(), group.size(), candidates.size(),
-                        eliminated, suggestions));
-            }
+            for (List<Position> group : byHallRole.values()) out.add(explain(group.getFirst(), group.size()));
             return out;
+        }
+
+        /** Why nobody can take {@code p}: first-failing reason counts and suggestions. */
+        Unfilled explain(Position p, int missing) {
+            Map<Reason, Integer> eliminated = new EnumMap<>(Reason.class);
+            Map<Reason, Integer> onlyReason = new EnumMap<>(Reason.class);
+            for (Candidate c : candidates) {
+                List<Reason> first = reasons(c, p, false);
+                if (!first.isEmpty()) eliminated.merge(first.getFirst(), 1, Integer::sum);
+                List<Reason> all = reasons(c, p, true);
+                if (all.size() == 1 && all.getFirst().configurable()) onlyReason.merge(all.getFirst(), 1, Integer::sum);
+            }
+            List<String> suggestions = new ArrayList<>();
+            onlyReason.entrySet().stream()
+                    .sorted(Map.Entry.<Reason, Integer>comparingByValue().reversed().thenComparing(Map.Entry.comparingByKey()))
+                    .forEach(e -> suggestions.add(e.getValue() + " faculty are blocked only because they "
+                            + e.getKey().description() + "; relaxing that rule in the policy would make them eligible."));
+            if (eliminated.getOrDefault(Reason.BUSY_IN_SESSION, 0) > 0 && onlyReason.isEmpty()) {
+                suggestions.add("Everyone else who could take it is already on duty at this time; add faculty, "
+                        + "or lower the invigilators needed.");
+            }
+            suggestions.add("Reduce the invigilators required for " + p.hall().hallCode()
+                    + " (manual override on the session page) or seat its students in another hall.");
+            return new Unfilled(p.session().id(), p.hall().id(), p.role(), missing, candidates.size(),
+                    eliminated, suggestions);
         }
 
         private Stats stats(long elapsedMillis) {

@@ -313,6 +313,18 @@ Any member can read the timetable; only EXAM_CELL_ADMIN changes it.
   is enforced by the shared validator (time overlap cannot be a simple unique index).
 - `unfilled_position` — chart, session_hall, role, reason `jsonb` (from the engine).
 
+Manual editing *(M9, `allocation/ChartEditService`, no migration)*: under
+`/api/v1/exam-periods/{id}/duty-chart`, `POST /assignments/validate` (blocking issues, warnings,
+ranked alternatives; nothing saved), `POST /assignments` (fill an open position), `PUT
+/assignments/{aid}` (give a duty to someone else; body carries the duty's `version`), `DELETE
+/assignments/{aid}?version=&reason=` (position becomes open with fresh reasons), `GET /history`.
+Exam cell only; only the DRAFT of a PLANNING/ALLOCATING period. Each change locks the draft row
+(`SELECT … FOR UPDATE`) and is re-checked inside that transaction, so two admins cannot together
+create a violation. Adding is only allowed into an open position (so `required = duties + missing`
+stays true); manual duties get `source = MANUAL` and no explanation. The chart view also carries
+`issues` (duties that break a hard rule now, e.g. leave approved after generation, or inactive
+faculty) and live `stats`.
+
 Lifecycle: a DRAFT is freely editable (every edit validated). Publishing freezes it as a version.
 After publishing, assignments change only through controlled workflows (swap, substitute, admin
 reassignment) — each runs the same validator and writes `audit_log`. A larger rework goes through a
@@ -328,7 +340,9 @@ new DRAFT version that supersedes the published one on publish.
   before `jsonb`, after `jsonb`, reason, occurred_at. Written in the same transaction as the change.
   Implemented (M2): `audit.AuditService.record(...)` is `Propagation.MANDATORY`, so it can only be
   called inside the changing transaction; pass DTOs/records as before/after, never entities.
-  Current actions: `COLLEGE_PROFILE_UPDATED`, `COLLEGE_ONBOARDING_COMPLETED`, `POLICY_VERSION_CREATED`.
+  Current actions: `COLLEGE_PROFILE_UPDATED`, `COLLEGE_ONBOARDING_COMPLETED`, `POLICY_VERSION_CREATED`,
+  `DUTY_CHART_GENERATED` (on `exam_period`), and from M9 `DUTY_ASSIGNED`, `DUTY_REPLACED`, `DUTY_REMOVED`
+  (on `duty_chart`, with a `DutySnapshot` before/after); the latter are the chart's edit history.
 
 **College endpoints (M2):** `GET /api/v1/college` (any member), `PUT /api/v1/college` and
 `POST /api/v1/college/complete-onboarding` (admin). Completion requires affiliation, address,

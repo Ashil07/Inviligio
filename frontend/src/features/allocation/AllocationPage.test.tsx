@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { routes } from '@/app/router'
 import { api } from '@/lib/api/client'
 import { makeAuth, makeSession, renderRoutes } from '@/test/render'
-import type { DutyChart } from './api'
+import type { DutyChart, HistoryEntry, Suggestion, Validation } from './api'
 
 const admin = () => makeAuth(makeSession(['EXAM_CELL_ADMIN'], { college: { ...makeSession().college, status: 'ACTIVE' } }))
 const period = { id: 'p1', name: 'Mar 2027', startDate: '2027-03-01', endDate: '2027-03-05', status: 'ALLOCATING', sessionCount: 2, version: 0 }
@@ -46,6 +46,7 @@ function chart(overrides: Partial<DutyChart> = {}): DutyChart {
                 role: 'INVIGILATOR',
                 source: 'AUTO',
                 explanation: { eligibleCandidates: 4, dutiesBefore: 0, penalties: ['invigilates an exam of their own department'] },
+                version: 3,
               },
             ],
           },
@@ -69,9 +70,10 @@ function chart(overrides: Partial<DutyChart> = {}): DutyChart {
       },
     ],
     workload: [
-      { facultyId: 'f1', code: 'F1', name: 'Ravi Kumar', departmentCode: 'ECE', duties: 1, chiefDuties: 0, dutyWeight: 1 },
-      { facultyId: 'f2', code: 'F2', name: 'Meera Nair', departmentCode: 'CSE', duties: 0, chiefDuties: 0, dutyWeight: 0.5 },
+      { facultyId: 'f1', code: 'F1', name: 'Ravi Kumar', departmentCode: 'ECE', duties: 1, chiefDuties: 0, dutyWeight: 1, active: true },
+      { facultyId: 'f2', code: 'F2', name: 'Meera Nair', departmentCode: 'CSE', duties: 0, chiefDuties: 0, dutyWeight: 0.5, active: true },
     ],
+    issues: [],
     ...overrides,
   }
 }
@@ -81,14 +83,27 @@ function noChart() {
   return new AxiosError('x', 'ERR', config, null, { status: 404, statusText: '', headers: {}, config, data: { code: 'NO_CHART' } })
 }
 
-function mockGets(current: DutyChart | null) {
+function mockGets(current: DutyChart | null, history: HistoryEntry[] = []) {
   vi.spyOn(api, 'get').mockImplementation(async (url: string) => {
     if (url === '/exam-periods/p1') return { data: period }
     if (url === '/exam-periods/p1/duty-chart') {
       if (!current) throw noChart()
       return { data: current }
     }
+    if (url === '/exam-periods/p1/duty-chart/history') return { data: history }
     throw new Error(url)
+  })
+}
+
+const meera: Suggestion = { facultyId: 'f2', code: 'F2', name: 'Meera Nair', departmentCode: 'CSE', duties: 0, warnings: [] }
+
+/** Answers validation requests: suggestions without a faculty id, `verdict` with one. */
+function mockValidation(verdict: Partial<Validation>) {
+  return vi.spyOn(api, 'post').mockImplementation(async (url: string, body?: unknown) => {
+    if (url !== '/exam-periods/p1/duty-chart/assignments/validate') throw new Error(url)
+    const request = body as { facultyId?: string }
+    if (!request.facultyId) return { data: { allowed: true, blocking: [], warnings: [], alternatives: [meera] } }
+    return { data: { allowed: true, blocking: [], warnings: [], alternatives: [meera], ...verdict } }
   })
 }
 
@@ -140,5 +155,93 @@ describe('AllocationPage', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Generate duty chart' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent('No session of this period has halls with students yet')
+  })
+
+  describe('editing the draft', () => {
+    it('replaces a duty with a suggested person after the server checks the choice', async () => {
+      mockGets(chart())
+      const post = mockValidation({ warnings: ['would have 3 duties in this period; the average is 1.2'] })
+      const put = vi.spyOn(api, 'put').mockResolvedValue({ data: chart() })
+      renderRoutes(routes, { path: '/admin/exams/p1/allocation', auth: admin() })
+
+      await userEvent.click(await screen.findByRole('button', { name: 'Replace Ravi Kumar in H1' }))
+      expect(screen.getByRole('region', { name: 'Replace Ravi Kumar' })).toHaveTextContent('invigilator in H1')
+      await userEvent.click(await screen.findByRole('button', { name: 'Choose Meera Nair' }))
+
+      expect(await screen.findByText('Allowed, but note')).toBeInTheDocument()
+      expect(screen.getByText(/would have 3 duties/)).toBeInTheDocument()
+      expect(post).toHaveBeenCalledWith('/exam-periods/p1/duty-chart/assignments/validate', {
+        sessionHallId: 'sh1', role: 'INVIGILATOR', replacesAssignmentId: 'a1', facultyId: 'f2',
+      })
+      await userEvent.type(screen.getByLabelText('Reason'), 'Clash with lab')
+      await userEvent.click(screen.getByRole('button', { name: 'Replace' }))
+
+      await waitFor(() => expect(put).toHaveBeenCalledWith('/exam-periods/p1/duty-chart/assignments/a1', {
+        facultyId: 'f2', version: 3, reason: 'Clash with lab',
+      }))
+      await waitFor(() => expect(screen.queryByRole('region', { name: 'Replace Ravi Kumar' })).not.toBeInTheDocument())
+    })
+
+    it('blocks a choice that breaks a strict rule', async () => {
+      mockGets(chart())
+      mockValidation({ allowed: false, blocking: [{ code: 'BUSY_IN_SESSION', message: 'Meera Nair is already on duty at this time.' }] })
+      const put = vi.spyOn(api, 'put')
+      renderRoutes(routes, { path: '/admin/exams/p1/allocation', auth: admin() })
+
+      await userEvent.click(await screen.findByRole('button', { name: 'Replace Ravi Kumar in H1' }))
+      await userEvent.selectOptions(screen.getByLabelText('Faculty member'), 'f2')
+
+      expect(await screen.findByText('Meera Nair is already on duty at this time.')).toBeInTheDocument()
+      expect(screen.getByText('Not allowed')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Replace' })).toBeDisabled()
+      expect(put).not.toHaveBeenCalled()
+    })
+
+    it('fills an open position', async () => {
+      mockGets(chart())
+      const post = mockValidation({})
+      renderRoutes(routes, { path: '/admin/exams/p1/allocation', auth: admin() })
+
+      await userEvent.click(await screen.findByRole('button', { name: 'Fill position in H1' }))
+      await userEvent.click(await screen.findByRole('button', { name: 'Choose Meera Nair' }))
+      expect(await screen.findByText('Fits every rule.')).toBeInTheDocument()
+      post.mockResolvedValueOnce({ data: chart({ unfilled: [] }) })
+      await userEvent.click(screen.getByRole('button', { name: 'Assign' }))
+
+      await waitFor(() => expect(post).toHaveBeenCalledWith('/exam-periods/p1/duty-chart/assignments', {
+        sessionHallId: 'sh1', role: 'INVIGILATOR', facultyId: 'f2', reason: '',
+      }))
+    })
+
+    it('removes a duty, and lists rule problems and the edit history', async () => {
+      mockGets(
+        chart({ issues: [{ assignmentId: 'a1', date: '2027-03-01', sessionLabel: 'FN', hallCode: 'H1', facultyName: 'Ravi Kumar', reasons: ['UNAVAILABLE'] }] }),
+        [{ id: 'h1', occurredAt: '2027-02-20T10:05:00Z', action: 'DUTY_REPLACED', actorName: 'Asha Admin',
+          summary: 'Replaced Meera Nair (F2) with Ravi Kumar (F1) as invigilator in H1, Mon 1 Mar FN', reason: 'Clash with lab' }],
+      )
+      const remove = vi.spyOn(api, 'delete').mockResolvedValue({ data: chart() })
+      renderRoutes(routes, { path: '/admin/exams/p1/allocation', auth: admin() })
+
+      expect(await screen.findByText(/1 duty breaks a strict rule now/)).toBeInTheDocument()
+      expect(screen.getByText(/Ravi Kumar \(on leave or unavailable\)/)).toBeInTheDocument()
+      expect(await screen.findByText(/Replaced Meera Nair \(F2\) with Ravi Kumar/)).toBeInTheDocument()
+      expect(screen.getByText(/Asha Admin · Reason: Clash with lab/)).toBeInTheDocument()
+
+      await userEvent.click(screen.getByRole('button', { name: 'Remove Ravi Kumar from H1' }))
+      await userEvent.click(screen.getByRole('button', { name: 'Remove duty' }))
+
+      await waitFor(() => expect(remove).toHaveBeenCalledWith('/exam-periods/p1/duty-chart/assignments/a1', {
+        params: { version: 3, reason: undefined },
+      }))
+    })
+
+    it('offers no editing on a published chart', async () => {
+      mockGets(chart({ status: 'PUBLISHED' }))
+      renderRoutes(routes, { path: '/admin/exams/p1/allocation', auth: admin() })
+
+      expect(await screen.findByText('1 open')).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /Replace Ravi Kumar/ })).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /Fill/ })).not.toBeInTheDocument()
+    })
   })
 })

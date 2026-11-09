@@ -53,6 +53,12 @@ public class UnfilledPosition extends TenantScopedEntity {
         this.reason = reason;
     }
 
+    /** After a chart edit: how many are still open and the current reasons. */
+    void update(int missing, Reasoning reason) {
+        this.missing = missing;
+        this.reason = reason;
+    }
+
     public UUID getChartId() { return chartId; }
     public SessionHall getSessionHall() { return sessionHall; }
     public AllocationResult.Role getRole() { return role; }

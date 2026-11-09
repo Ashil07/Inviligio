@@ -119,6 +119,7 @@ export function useSessions(periodId: string) {
   return useQuery({
     queryKey: scheduleKeys.sessions(periodId),
     queryFn: async () => (await api.get<SessionSummary[]>(`/exam-periods/${periodId}/sessions`)).data,
+    enabled: !!periodId,
   })
 }
 

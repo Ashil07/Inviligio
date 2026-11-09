@@ -157,6 +157,28 @@ should use composite FKs to `subject (college_id, id)` and `faculty (college_id,
 
 ---
 
+## M6 Availability and leave: done  (2026-11-09)
+
+**Built**
+- Migration `V7__availability`: `availability_request`.
+- Backend `availability/`: `AvailabilityService` (self-service within policy, HOD/exam-cell
+  review with department scope, exam-cell recording, cancellation, per-session overview,
+  `unavailableFacultyIds` for the engine), `AvailabilityController`.
+- Frontend: `/faculty/availability`, `/hod/requests`, `/admin/availability` (requests, record
+  leave, per-session overview); `AreaLayout` navigation for the HOD and faculty areas.
+
+**Verified**
+- Backend: 128 tests (12 new: auto-approval, session requests, policy limits, overlaps, past dates,
+  cancellation, unlinked logins, HOD scope, own-request rule, exam-cell recording, overview,
+  cross-college isolation). A flaky existing audit-order assertion was made order-independent.
+- Frontend: 60 tests; lint, typecheck, build clean.
+
+**Not verified**
+- Not exercised in a browser against a running backend (database deferred to Developer 2).
+- No notifications when a request is decided (in-app status only, Q8).
+
+---
+
 ## Developer 1 → Developer 2  (date)
 
 **Completed milestones:**  

@@ -282,12 +282,23 @@ see ALLOCATION_ENGINE.md §3. Endpoints: `/api/v1/exam-periods[/{id}[/sessions[/
 `/api/v1/exam-sessions/{id}[/exams|/halls]`, `/api/v1/exams/{id}`, `/api/v1/session-halls/{id}`.
 Any member can read the timetable; only EXAM_CELL_ADMIN changes it.
 
-**Availability**
-- `availability_request` — faculty, date, session (null = whole day), type (`LEAVE`,
-  `UNAVAILABLE`), reason, status (`PENDING`, `APPROVED`, `REJECTED`, `CANCELLED`), reviewed_by/at.
-  If policy says no approval is needed, requests are created `APPROVED`.
-- `availability_override` — admin override of an approved unavailability for a specific session,
-  with mandatory reason (audited).
+**Availability** *(M6, `availability/`, migration V7)*
+- `availability_request` — faculty, from_date..to_date (≤ 93 days) **or** one session (then both
+  dates are the session's date), type (`LEAVE`, `UNAVAILABLE`), reason, status (`PENDING`,
+  `APPROVED`, `REJECTED`, `CANCELLED`), requested_by, reviewed_by/at, review_note.
+- Faculty (`/api/v1/me/availability`) may ask only for what the policy allows (whole days and/or
+  single sessions), from today on (college time zone). With `leaveRequiresHodApproval` the request
+  is PENDING, otherwise APPROVED at once. Overlapping active requests are refused, except two
+  different sessions.
+- Review (`/api/v1/availability/{id}/approve|reject`): the exam cell, or a HOD for faculty of
+  *their* department (the department of the HOD's own faculty record). Nobody reviews their own
+  request. The exam cell records leave for anyone (`POST /api/v1/availability`), approved at once.
+- Faculty cancel their own current or future requests; the exam cell cancels any.
+- `GET /api/v1/exam-periods/{id}/availability`: per session, who is unavailable (approved) and
+  whose requests are pending. `AvailabilityService.unavailableFacultyIds(session)` is the hard
+  constraint input for allocation (approved only).
+- Not built yet: `availability_override` (exam cell overriding approved unavailability for one
+  session, with a reason). It belongs with manual chart editing (M9).
 
 **Allocation and charts**
 - `allocation_run` — period, policy_id, status, started/finished, input hash, stats `jsonb`,

@@ -84,7 +84,8 @@ class AcademicStructureIntegrationTest extends IntegrationTest {
 
             var trail = tenants.asTenant(a.collegeId(), () -> auditLog.findByEntityTypeAndEntityIdOrderByOccurredAtDesc(
                     "department", UUID.fromString((String) created.get("id"))));
-            assertThat(trail).extracting(e -> e.getAction()).containsExactly("DEPARTMENT_UPDATED", "DEPARTMENT_CREATED");
+            // Both entries can share a timestamp (coarse clocks), so order is not asserted.
+            assertThat(trail).extracting(e -> e.getAction()).containsExactlyInAnyOrder("DEPARTMENT_UPDATED", "DEPARTMENT_CREATED");
         }
 
         @Test

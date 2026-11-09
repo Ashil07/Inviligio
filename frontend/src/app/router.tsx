@@ -2,6 +2,7 @@ import { createBrowserRouter, type RouteObject } from 'react-router'
 import { NotFoundPage } from '@/components/NotFoundPage'
 import { HomeRedirect, PublicOnly, RequireAuth, RequireRole } from '@/features/auth/guards'
 import { AcceptInvitePage } from '@/features/auth/AcceptInvitePage'
+import { AdminAvailabilityPage, DepartmentRequestsPage, MyAvailabilityPage } from '@/features/availability/AvailabilityPages'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { RegisterCollegePage } from '@/features/auth/RegisterCollegePage'
 import { CollegeSettingsPage } from '@/features/college/CollegeSettingsPage'
@@ -19,6 +20,7 @@ import { SubjectsPage } from '@/features/subjects/SubjectsPage'
 import { SystemStatusPage } from '@/features/system/SystemStatusPage'
 import { AdminLayout, AdminPage } from './AdminLayout'
 import { AppLayout } from './AppLayout'
+import { AreaLayout } from './AreaLayout'
 import { AdminHomePage, FacultyHomePage, HodHomePage } from './RoleHomePages'
 
 /**
@@ -62,6 +64,7 @@ export const routes: RouteObject[] = [
                       { path: '/admin/faculty', element: <FacultyListPage /> },
                       { path: '/admin/faculty/:id', element: <FacultyDetailPage /> },
                       { path: '/admin/import', element: <ImportPage /> },
+                      { path: '/admin/availability', element: <AdminAvailabilityPage /> },
                       { path: '/admin/settings/college', element: <CollegeSettingsPage /> },
                       { path: '/admin/settings/policy', element: <PolicySettingsPage /> },
                       { path: '/admin/settings/policy/versions/:version', element: <PolicyVersionPage /> },
@@ -71,8 +74,30 @@ export const routes: RouteObject[] = [
               },
             ],
           },
-          { element: <RequireRole role="HOD" />, children: [{ path: '/hod', element: <HodHomePage /> }] },
-          { element: <RequireRole role="FACULTY" />, children: [{ path: '/faculty', element: <FacultyHomePage /> }] },
+          {
+            element: <RequireRole role="HOD" />,
+            children: [
+              {
+                element: <AreaLayout label="Department" links={[{ to: '/hod', label: 'Overview', end: true }, { to: '/hod/requests', label: 'Leave requests' }]} />,
+                children: [
+                  { path: '/hod', element: <HodHomePage /> },
+                  { path: '/hod/requests', element: <DepartmentRequestsPage /> },
+                ],
+              },
+            ],
+          },
+          {
+            element: <RequireRole role="FACULTY" />,
+            children: [
+              {
+                element: <AreaLayout label="Faculty" links={[{ to: '/faculty', label: 'My duties', end: true }, { to: '/faculty/availability', label: 'My availability' }]} />,
+                children: [
+                  { path: '/faculty', element: <FacultyHomePage /> },
+                  { path: '/faculty/availability', element: <MyAvailabilityPage /> },
+                ],
+              },
+            ],
+          },
         ],
       },
     ],

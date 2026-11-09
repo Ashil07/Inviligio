@@ -46,8 +46,22 @@ public class ExamPeriod extends TenantScopedEntity {
         if (status == Status.PLANNING) status = Status.ALLOCATING;
     }
 
+    /** A duty chart has been published: the timetable is frozen so published duties cannot change by accident. */
+    void publish() {
+        if (status != Status.CLOSED) status = Status.PUBLISHED;
+    }
+
+    /** Timetable (sessions, exams, seating) can be changed. */
     public boolean isEditable() {
         return status == Status.PLANNING || status == Status.ALLOCATING;
+    }
+
+    /**
+     * Duty charts can still be generated, edited and published. Stays true after publishing so a
+     * new version can be prepared; only a closed period is final.
+     */
+    public boolean allowsChartChanges() {
+        return status != Status.CLOSED;
     }
 
     public boolean contains(LocalDate date) {

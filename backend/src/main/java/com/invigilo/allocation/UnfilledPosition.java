@@ -53,6 +53,10 @@ public class UnfilledPosition extends TenantScopedEntity {
         this.reason = reason;
     }
 
+    static UnfilledPosition copyOf(UnfilledPosition u, UUID chartId) {
+        return new UnfilledPosition(chartId, u.sessionHall, u.role, u.missing, u.reason);
+    }
+
     /** After a chart edit: how many are still open and the current reasons. */
     void update(int missing, Reasoning reason) {
         this.missing = missing;

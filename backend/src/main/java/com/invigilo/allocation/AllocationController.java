@@ -1,6 +1,7 @@
 package com.invigilo.allocation;
 
 import com.invigilo.allocation.AllocationService.ChartView;
+import com.invigilo.allocation.AllocationService.VersionSummary;
 import com.invigilo.allocation.ChartEditService.HistoryEntry;
 import com.invigilo.allocation.ChartEditService.Validation;
 import com.invigilo.allocation.engine.AllocationResult.Role;
@@ -38,12 +39,17 @@ public class AllocationController {
 
     public record ReplaceRequest(@NotNull UUID facultyId, @NotNull Long version, @Size(max = 500) String reason) {}
 
+    /** {@code version} is the draft's version as reviewed. */
+    public record PublishRequest(@NotNull Long version) {}
+
     private final AllocationService allocation;
     private final ChartEditService editor;
+    private final ChartPublishService publisher;
 
-    public AllocationController(AllocationService allocation, ChartEditService editor) {
+    public AllocationController(AllocationService allocation, ChartEditService editor, ChartPublishService publisher) {
         this.allocation = allocation;
         this.editor = editor;
+        this.publisher = publisher;
     }
 
     @GetMapping
@@ -76,6 +82,27 @@ public class AllocationController {
     public ChartView remove(@PathVariable UUID periodId, @PathVariable UUID assignmentId, @RequestParam Long version,
                             @RequestParam(required = false) String reason) {
         return editor.remove(periodId, assignmentId, version, reason);
+    }
+
+    @PostMapping("/publish")
+    public ChartView publish(@PathVariable UUID periodId, @Valid @RequestBody PublishRequest request) {
+        return publisher.publish(periodId, request.version(), CurrentUser.require());
+    }
+
+    /** A new draft copied from the published chart. */
+    @PostMapping("/draft")
+    public ChartView newDraft(@PathVariable UUID periodId) {
+        return publisher.newDraftFromPublished(periodId, CurrentUser.require());
+    }
+
+    @GetMapping("/versions")
+    public List<VersionSummary> versions(@PathVariable UUID periodId) {
+        return allocation.versions(periodId);
+    }
+
+    @GetMapping("/versions/{chartVersion}")
+    public ChartView version(@PathVariable UUID periodId, @PathVariable int chartVersion) {
+        return allocation.version(periodId, chartVersion);
     }
 
     @GetMapping("/history")

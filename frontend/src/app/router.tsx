@@ -1,7 +1,7 @@
 import { createBrowserRouter, type RouteObject } from 'react-router'
 import { NotFoundPage } from '@/components/NotFoundPage'
 import { HomeRedirect, PublicOnly, RequireAuth, RequireRole } from '@/features/auth/guards'
-import { AllocationPage } from '@/features/allocation/AllocationPage'
+import { AllocationPage, ChartVersionPage } from '@/features/allocation/AllocationPage'
 import { AcceptInvitePage } from '@/features/auth/AcceptInvitePage'
 import { AdminAvailabilityPage, DepartmentRequestsPage, MyAvailabilityPage } from '@/features/availability/AvailabilityPages'
 import { LoginPage } from '@/features/auth/LoginPage'
@@ -62,6 +62,7 @@ export const routes: RouteObject[] = [
                       { path: '/admin/exams', element: <PeriodsPage /> },
                       { path: '/admin/exams/:periodId', element: <PeriodDetailPage /> },
                       { path: '/admin/exams/:periodId/allocation', element: <AllocationPage /> },
+                      { path: '/admin/exams/:periodId/allocation/versions/:chartVersion', element: <ChartVersionPage /> },
                       { path: '/admin/exams/sessions/:sessionId', element: <SessionPage /> },
                       { path: '/admin/faculty', element: <FacultyListPage /> },
                       { path: '/admin/faculty/:id', element: <FacultyDetailPage /> },

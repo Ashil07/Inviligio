@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { routes } from '@/app/router'
 import { api } from '@/lib/api/client'
 import { makeAuth, makeSession, renderRoutes } from '@/test/render'
-import type { DutyChart, HistoryEntry, Suggestion, Validation } from './api'
+import type { DutyChart, HistoryEntry, Suggestion, Validation, VersionSummary } from './api'
 
 const admin = () => makeAuth(makeSession(['EXAM_CELL_ADMIN'], { college: { ...makeSession().college, status: 'ACTIVE' } }))
 const period = { id: 'p1', name: 'Mar 2027', startDate: '2027-03-01', endDate: '2027-03-05', status: 'ALLOCATING', sessionCount: 2, version: 0 }
@@ -74,6 +74,10 @@ function chart(overrides: Partial<DutyChart> = {}): DutyChart {
       { facultyId: 'f2', code: 'F2', name: 'Meera Nair', departmentCode: 'CSE', duties: 0, chiefDuties: 0, dutyWeight: 0.5, active: true },
     ],
     issues: [],
+    version: 7,
+    publishedAt: null,
+    publishedBy: null,
+    publishedVersion: null,
     ...overrides,
   }
 }
@@ -83,7 +87,7 @@ function noChart() {
   return new AxiosError('x', 'ERR', config, null, { status: 404, statusText: '', headers: {}, config, data: { code: 'NO_CHART' } })
 }
 
-function mockGets(current: DutyChart | null, history: HistoryEntry[] = []) {
+function mockGets(current: DutyChart | null, history: HistoryEntry[] = [], versions: VersionSummary[] = []) {
   vi.spyOn(api, 'get').mockImplementation(async (url: string) => {
     if (url === '/exam-periods/p1') return { data: period }
     if (url === '/exam-periods/p1/duty-chart') {
@@ -91,6 +95,7 @@ function mockGets(current: DutyChart | null, history: HistoryEntry[] = []) {
       return { data: current }
     }
     if (url === '/exam-periods/p1/duty-chart/history') return { data: history }
+    if (url === '/exam-periods/p1/duty-chart/versions') return { data: versions }
     throw new Error(url)
   })
 }
@@ -155,6 +160,52 @@ describe('AllocationPage', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Generate duty chart' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent('No session of this period has halls with students yet')
+  })
+
+  describe('publishing', () => {
+    it('publishes the reviewed draft after confirming open positions and the version it replaces', async () => {
+      mockGets(chart({ publishedVersion: 1, chartVersion: 2 }))
+      vi.spyOn(window, 'confirm').mockReturnValue(true)
+      const post = vi.spyOn(api, 'post').mockResolvedValue({ data: chart({ status: 'PUBLISHED', chartVersion: 2, publishedVersion: 2, publishedAt: '2027-02-21T09:00:00Z' }) })
+      renderRoutes(routes, { path: '/admin/exams/p1/allocation', auth: admin() })
+
+      expect(await screen.findByText('No duty breaks a strict rule.')).toBeInTheDocument()
+      expect(screen.getByText(/1 position is still open/)).toBeInTheDocument()
+      expect(screen.getByText(/Version 1 is published and stays in force/)).toBeInTheDocument()
+      await userEvent.click(screen.getByRole('button', { name: 'Publish version 2' }))
+
+      expect(window.confirm).toHaveBeenCalledWith(expect.stringMatching(/replaces published version 1[\s\S]*1 position is still open/))
+      await waitFor(() => expect(post).toHaveBeenCalledWith('/exam-periods/p1/duty-chart/publish', { version: 7 }))
+      expect(await screen.findByText(/this is what faculty see/)).toBeInTheDocument()
+    })
+
+    it('does not allow publishing while a duty breaks a strict rule', async () => {
+      mockGets(chart({ issues: [{ assignmentId: 'a1', date: '2027-03-01', sessionLabel: 'FN', hallCode: 'H1', facultyName: 'Ravi Kumar', reasons: ['UNAVAILABLE'] }] }))
+      renderRoutes(routes, { path: '/admin/exams/p1/allocation', auth: admin() })
+
+      expect(await screen.findByText(/1 duty breaks a strict rule; fix it before publishing/)).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Publish version 1' })).toBeDisabled()
+    })
+
+    it('starts a new version from the published chart and lists versions', async () => {
+      mockGets(
+        chart({ status: 'PUBLISHED', publishedVersion: 1, publishedAt: '2027-02-21T09:00:00Z', publishedBy: 'Asha Admin' }),
+        [],
+        [{ chartVersion: 1, status: 'PUBLISHED', createdAt: '2027-02-20T10:00:00Z', publishedAt: '2027-02-21T09:00:00Z', publishedBy: 'Asha Admin', positions: 3, filled: 2 }],
+      )
+      const post = vi.spyOn(api, 'post').mockResolvedValue({ data: chart({ chartVersion: 2, publishedVersion: 1 }) })
+      renderRoutes(routes, { path: '/admin/exams/p1/allocation', auth: admin() })
+
+      expect(await screen.findByText(/by Asha Admin; this is what faculty see/)).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /Replace Ravi Kumar/ })).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /Publish version/ })).not.toBeInTheDocument()
+      expect(await screen.findByRole('link', { name: 'View' })).toHaveAttribute('href', '/admin/exams/p1/allocation/versions/1')
+      expect(screen.getAllByText('2 of 3')).toHaveLength(2)
+
+      await userEvent.click(screen.getByRole('button', { name: 'Start new version' }))
+      await waitFor(() => expect(post).toHaveBeenCalledWith('/exam-periods/p1/duty-chart/draft'))
+      expect(await screen.findByRole('button', { name: 'Replace Ravi Kumar in H1' })).toBeInTheDocument()
+    })
   })
 
   describe('editing the draft', () => {

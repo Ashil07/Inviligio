@@ -69,6 +69,14 @@ public class DutyAssignment extends TenantScopedEntity {
         return d;
     }
 
+    /** The same duty in another chart version (a new draft started from the published chart). */
+    static DutyAssignment copyOf(DutyAssignment d, UUID chartId) {
+        DutyAssignment copy = new DutyAssignment(chartId, d.sessionHall, d.faculty, d.role, d.explanation);
+        copy.source = d.source;
+        copy.status = d.status;
+        return copy;
+    }
+
     /** Gives this duty to someone else (chart editor). */
     void reassign(Faculty to) {
         this.faculty = to;

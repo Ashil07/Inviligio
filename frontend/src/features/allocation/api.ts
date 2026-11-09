@@ -98,6 +98,22 @@ export interface DutyChart {
   unfilled: Unfilled[]
   workload: WorkloadRow[]
   issues: ChartIssue[]
+  /** Optimistic-lock version: changes with every edit. */
+  version: number
+  publishedAt: string | null
+  publishedBy: string | null
+  /** The period's currently published version, if any. */
+  publishedVersion: number | null
+}
+
+export interface VersionSummary {
+  chartVersion: number
+  status: 'DRAFT' | 'PUBLISHED' | 'SUPERSEDED'
+  createdAt: string
+  publishedAt: string | null
+  publishedBy: string | null
+  positions: number
+  filled: number
 }
 
 export interface Suggestion {
@@ -177,6 +193,8 @@ export function useGenerateChart(periodId: string) {
     mutationFn: async () => (await api.post<DutyChart>(`/exam-periods/${periodId}/duty-chart/generate`)).data,
     onSuccess: (chart) => {
       queryClient.setQueryData(key(periodId), chart)
+      void queryClient.invalidateQueries({ queryKey: [...key(periodId), 'versions'] })
+      void queryClient.invalidateQueries({ queryKey: [...key(periodId), 'history'] })
       void queryClient.invalidateQueries({ queryKey: ['schedule'] })
     },
   })
@@ -189,6 +207,20 @@ export function useValidateChange(periodId: string, request: ChangeRequest | nul
     queryFn: async () => (await api.post<Validation>(`/exam-periods/${periodId}/duty-chart/assignments/validate`, request)).data,
     enabled: request !== null,
     staleTime: 0,
+  })
+}
+
+export function useChartVersions(periodId: string) {
+  return useQuery({
+    queryKey: [...key(periodId), 'versions'] as const,
+    queryFn: async () => (await api.get<VersionSummary[]>(`/exam-periods/${periodId}/duty-chart/versions`)).data,
+  })
+}
+
+export function useChartVersion(periodId: string, chartVersion: number) {
+  return useQuery({
+    queryKey: [...key(periodId), 'versions', chartVersion] as const,
+    queryFn: async () => (await api.get<DutyChart>(`/exam-periods/${periodId}/duty-chart/versions/${chartVersion}`)).data,
   })
 }
 
@@ -209,8 +241,21 @@ function useChartEdit<T>(periodId: string, send: (input: T) => Promise<DutyChart
       queryClient.setQueryData(key(periodId), chart)
       void queryClient.invalidateQueries({ queryKey: [...key(periodId), 'validate'] })
       void queryClient.invalidateQueries({ queryKey: [...key(periodId), 'history'] })
+      void queryClient.invalidateQueries({ queryKey: [...key(periodId), 'versions'] })
+      void queryClient.invalidateQueries({ queryKey: ['schedule'] })
     },
   })
+}
+
+/** Publishes the draft as reviewed; `version` is the draft's version on screen. */
+export function usePublishChart(periodId: string) {
+  return useChartEdit(periodId, async (version: number) =>
+    (await api.post<DutyChart>(`/exam-periods/${periodId}/duty-chart/publish`, { version })).data)
+}
+
+/** Starts a new draft as a copy of the published chart. */
+export function useNewDraft(periodId: string) {
+  return useChartEdit(periodId, async () => (await api.post<DutyChart>(`/exam-periods/${periodId}/duty-chart/draft`)).data)
 }
 
 export function useAddDuty(periodId: string) {

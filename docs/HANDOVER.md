@@ -354,3 +354,30 @@ validator described above, then the editor UI on top of `AllocationPage`.
 
 **Next:** M10 review and publish (use `ChartChecker.violations()` / `ChartView.issues` to block
 publishing).
+
+---
+
+## M10 Review and publish: done  (2026-11-09)
+
+Merged before this: pull requests #1 (leave-form fix) and #2 (M9); CI passed on both.
+
+**Built** (branch `feat/allocation-publish`, no migration)
+- `ChartPublishService`: publish (draft as reviewed, blocked by rule breaks, supersedes the old
+  version, freezes the timetable by setting the period PUBLISHED) and "start new version" (copy of
+  the published chart as a new draft). `ExamPeriod.allowsChartChanges()` lets drafts be generated,
+  edited and published after publishing; only CLOSED is final. Edits bump the draft's version.
+- `AllocationService.versions()/version(n)`; `ChartView` gained `version`, `publishedAt`,
+  `publishedBy`, `publishedVersion`.
+- Frontend: "Review and publish" checklist and button, "Start new version" / "Generate new draft"
+  on a published chart, versions table, read-only version page
+  (`/admin/exams/:periodId/allocation/versions/:n`). Shared test setup moved to `ChartScenario`.
+
+**Verified**
+- Backend: 4 new integration tests (`ChartPublishIntegrationTest`); full suite green.
+- Frontend: 71 tests (3 new), lint, typecheck, build clean.
+
+**Known limits / decisions for the product owner**
+- After publishing, the timetable is frozen. Rescheduling an exam after publication has no flow yet
+  (would need an explicit "unlock timetable" that keeps published duties safe).
+- Faculty and HOD cannot see the published chart yet: that is M11/M12.
+- No notifications on publish (Q8: in-app only).

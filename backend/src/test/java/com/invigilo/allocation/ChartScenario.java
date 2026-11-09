@@ -60,6 +60,7 @@ abstract class ChartScenario extends IntegrationTest {
             Map<String, Object> body = new HashMap<>(Map.of("employeeCode", code, "fullName", "Faculty " + code,
                     "departmentId", code.equals("F1") ? cse : ece, "employmentType", "REGULAR", "chiefEligible", true,
                     "dutyWeight", 1, "active", true));
+            body.put("email", code.toLowerCase() + "." + TestData.unique().toLowerCase() + "@college.example.test");
             if (code.equals("F1")) body.put("subjectIds", List.of(cs301)); // never in the hall writing CS301
             facultyIds.put(code, id(send(POST, "/api/v1/faculty", body)));
         }
@@ -91,6 +92,16 @@ abstract class ChartScenario extends IntegrationTest {
         var r = send(POST, "/api/v1/exam-sessions/" + sessionId + "/halls",
                 Map.of("hallId", hallId, "seating", List.of(Map.of("examId", examId, "studentCount", students))));
         assertThat(r.getStatusCode()).as(String.valueOf(r.getBody())).isEqualTo(HttpStatus.CREATED);
+    }
+
+    /** Signs in as faculty member {@code code} through the invitation flow; returns their access token. */
+    String loginAs(String code) {
+        String token = (String) send(POST, "/api/v1/faculty/" + facultyIds.get(code) + "/access/invitation", Map.of("roles", List.of()))
+                .getBody().get("token");
+        var accepted = http.postForEntity("/api/v1/auth/invitations/accept",
+                TestData.json(Map.of("token", token, "password", "faculty-password")), Map.class);
+        assertThat(accepted.getStatusCode()).as(String.valueOf(accepted.getBody())).isEqualTo(HttpStatus.OK);
+        return (String) accepted.getBody().get("accessToken");
     }
 
     Map<String, Object> generate() {

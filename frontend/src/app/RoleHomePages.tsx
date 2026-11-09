@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router'
 import { useCollege } from '@/features/college/api'
+import { FacultyDashboard } from '@/features/myduties/FacultyDashboard'
 import { useSession } from '@/features/auth/useAuth'
 import { usePolicy } from '@/features/policy/api'
 import { formatDateTime } from '@/lib/forms'
@@ -100,5 +101,9 @@ export function HodHomePage() {
 }
 
 export function FacultyHomePage() {
-  return <AreaHome title="My duties" />
+  return (
+    <AreaHome title="My duties">
+      <FacultyDashboard />
+    </AreaHome>
+  )
 }

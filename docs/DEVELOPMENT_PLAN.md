@@ -80,7 +80,7 @@ admin page, then start M9.
 |---|---|---|
 | M9 | Duty chart editor | **Done** except `availability_override` (see HANDOVER.md). Replace/add/remove assignments; live `validate` endpoint (blocking errors vs warnings) using the shared constraints; alternative suggestions; optimistic locking; edit history. |
 | M10 | Review & publish | **Done.** Review screen; publish blocked by hard errors; immutable versions; supersede flow; audit history. |
-| M11 | Faculty dashboard | Upcoming/past duties, calendar, availability requests, own schedule download. |
+| M11 | Faculty dashboard | **Done.** Upcoming/past duties, calendar, availability requests, own schedule download (.ics). |
 | M12 | HOD dashboard | Department faculty, duties, workload (over/under), leave and swap approvals. |
 | M13 | Duty swaps | Request → recipient accept → optional HOD → transactional revalidated swap → audit. |
 | M14 | Emergency substitutes | Ranked eligible candidates with reasons; admin selects; audited reassignment. |

@@ -381,3 +381,29 @@ Merged before this: pull requests #1 (leave-form fix) and #2 (M9); CI passed on 
   (would need an explicit "unlock timetable" that keeps published duties safe).
 - Faculty and HOD cannot see the published chart yet: that is M11/M12.
 - No notifications on publish (Q8: in-app only).
+
+---
+
+## M11 Faculty dashboard: done  (2026-11-09)
+
+**Built** (branch `feat/faculty-dashboard`, no migration)
+- Backend: `MyDutiesService` + `MyDutiesController` (`/api/v1/me/duties`, `/api/v1/me/duties.ics`);
+  repository queries `findPublishedForFaculty` and `findInHalls` (colleagues).
+- Frontend: `features/myduties/` (`FacultyDashboard`, `api.ts`) on `/faculty`: next duty, counts,
+  month calendar (weeks start Monday, today ringed), upcoming and past tables, leave-request status
+  with a link to `/faculty/availability`, and "Download calendar" (.ics).
+- Test support: `ChartScenario` faculty now have emails, and `loginAs(code)` signs in as one.
+
+**Verified**
+- Backend: 3 new integration tests (`MyDutiesIntegrationTest`: drafts hidden, published duties with
+  colleagues, no duplicates after a new version, calendar content and line folding, unlinked login
+  403, faculty with no duties); full suite green.
+- Frontend: 75 tests (4 new); lint, typecheck, build clean.
+- In the browser as demo faculty Arun Nair (F004): dashboard with two published duties; the .ics
+  file fetched from the running API is valid.
+
+**Known limits**
+- Duty status (COMPLETED/ABSENT) is not set anywhere yet; "Done" means the session has ended.
+  Marking attendance belongs with remuneration (M17, product question Q3).
+- The test clock only moves forward and is shared, so the upcoming/past split is not tested by
+  moving time; the split uses session end time in the college's zone.

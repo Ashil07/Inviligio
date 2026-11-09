@@ -336,6 +336,13 @@ copies the published chart into a new DRAFT (or generate one); publishing it sup
 one. `GET /duty-chart/versions[/{n}]` lists and shows every version. Audit actions
 `DUTY_CHART_PUBLISHED` and `DUTY_CHART_DRAFTED` (on `duty_chart`) appear in the history.
 
+Faculty view *(M11, `allocation/MyDutiesService`)*: `GET /api/v1/me/duties` returns the caller's
+duties from PUBLISHED charts only (never drafts or superseded versions; cancelled duties excluded),
+split into `upcoming` (until the session ends) and `past` by the college's time zone, with the
+colleagues in the same hall. `GET /api/v1/me/duties.ics` returns them as an RFC 5545 calendar
+(UTC times, escaped and folded lines). The faculty member comes from the caller's membership
+(`NOT_A_FACULTY_MEMBER` 403 when the login is not linked), so nobody can ask for someone else's.
+
 Lifecycle: a DRAFT is freely editable (every edit validated). Publishing freezes it as a version.
 After publishing, assignments change only through controlled workflows (swap, substitute, admin
 reassignment) — each runs the same validator and writes `audit_log`. A larger rework goes through a

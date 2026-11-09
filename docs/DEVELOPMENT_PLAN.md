@@ -44,7 +44,7 @@ merged. If two branches race for the same number, the later one renumbers before
 | M4 | Faculty, access, import | **Done.** Faculty CRUD (department, designation, employment type, joined-on seniority, chief eligibility, duty weight, subjects taught), per-person restrictions, login invitations with role management, CSV import (dry run + all-or-nothing apply) for departments, subjects, halls and faculty. |
 | M5 | Exam scheduling | **Done.** Periods, sessions (single or generated per day with weekday skipping), exams, session halls with mixed seating, computed staffing with reasoned overrides, capacity/registration/overlap checks and warnings; admin pages for periods, sessions and seating. |
 | M6 | Availability | **Done.** Faculty request whole days or single sessions within policy limits; HOD (own department) or exam cell approves; exam cell records leave for anyone; cancellation; per-session overview; faculty, HOD and exam-cell pages. Admin override of approved unavailability moves to M9. |
-| M7 | Allocation engine | Per ALLOCATION_ENGINE.md: pure-Java engine, constraints, solver, repair, final validation, unit tests incl. determinism and scale; `AllocationService` persisting run + DRAFT chart + unfilled positions. |
+| M7 | Allocation engine | **Done.** Pure-Java engine (hard rules, soft costs, per-group Hungarian, look-ahead, repair, validation, explanations), runs and DRAFT charts persisted with policy version and input fingerprint. 3000 positions in ~0.5 s. |
 | M8 | Basic allocation review | Admin "Generate" action; chart grid (date × session × hall); unfilled positions with funnels and suggestions; workload table; regenerate replaces the draft. |
 | H1 | Handover | Fill in [HANDOVER.md](HANDOVER.md); demo seed data script; all CI green. |
 

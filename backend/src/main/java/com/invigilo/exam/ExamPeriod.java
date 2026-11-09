@@ -41,6 +41,11 @@ public class ExamPeriod extends TenantScopedEntity {
         this.endDate = endDate;
     }
 
+    /** A generated draft exists: still editable, but no longer just planning. */
+    void startAllocating() {
+        if (status == Status.PLANNING) status = Status.ALLOCATING;
+    }
+
     public boolean isEditable() {
         return status == Status.PLANNING || status == Status.ALLOCATING;
     }

@@ -18,6 +18,10 @@ interface SessionHallRepository extends JpaRepository<SessionHall, UUID> {
     @EntityGraph(attributePaths = {"hall", "seating", "seating.exam"})
     List<SessionHall> findBySessionIdIn(Collection<UUID> sessionIds);
 
+    /** For allocation: halls with their seated exams and subjects. */
+    @EntityGraph(attributePaths = {"hall", "session", "seating", "seating.exam", "seating.exam.subject"})
+    List<SessionHall> findWithExamsBySessionIdIn(Collection<UUID> sessionIds);
+
     boolean existsBySessionIdAndHallId(UUID sessionId, UUID hallId);
 
     long countByHallId(UUID hallId);

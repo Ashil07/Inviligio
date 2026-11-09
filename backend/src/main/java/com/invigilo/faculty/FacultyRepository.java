@@ -33,4 +33,7 @@ interface FacultyRepository extends JpaRepository<Faculty, UUID>, JpaSpecificati
     boolean existsByEmailAndIdNot(String email, UUID id);
 
     long countByDepartmentId(UUID departmentId);
+
+    @EntityGraph(attributePaths = "department")
+    List<Faculty> findByActiveTrue();
 }

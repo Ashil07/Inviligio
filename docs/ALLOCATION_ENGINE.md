@@ -187,6 +187,44 @@ and actionable. The engine never relaxes a rule itself.
 - Zero students in a session hall (no positions).
 - Policy changed between generation and publish (publish uses the draft's policy version; UI warns that a newer policy exists).
 
+## 8a. As implemented (M7)
+
+Code: `backend/src/main/java/com/invigilo/allocation/engine/` (pure) and `allocation/AllocationService`.
+
+- **Positions** come from `exam.Staffing` per session hall (halls needing 0 are skipped).
+- **Overlap groups** are built chronologically; a faculty member takes at most one position per
+  group (conservative for chains of partly overlapping sessions).
+- **Hard rules, in order** (`Reason`): unavailable (approved leave), visiting/guest not eligible,
+  personal hall exclusion, personal department exclusion, own subject, own department (FORBID),
+  chief eligibility (incl. NOT_CHIEF), busy at that time, max per day (policy and personal, the
+  lower wins), minimum rest, consecutive sessions (HARD), consecutive days (HARD), max per period
+  (policy and personal). "Visiting" means employment type VISITING or GUEST.
+- **Costs** (integers): load `(equalDistributionWeight×100 + 10) × (2L + 1)` with
+  `L = (duties + historical × historicalWorkloadPercent/100) / effectiveWeight`;
+  `effectiveWeight = dutyWeight × (seniorsGetFewerDuties ? 1 − 0.4 × seniority : 1)` where the most
+  senior (earliest joining date) has seniority 1 and the most junior 0; +400 for a SOFT
+  consecutive-session or consecutive-day excess; +600 own department (AVOID); +30 ×
+  avoidRepeatHallWeight per earlier duty in the same hall; chief positions +300 × juniority when
+  `preferSeniorsAsChief`; look-ahead scarcity +150 × Σ(1/eligible) over the next 3 groups.
+- **Solver**: Hungarian per group with one "unfilled" column per position (cost 1e9) and
+  forbidden pairs at 1e15, so the number of filled positions is maximised first, then cost.
+- **Repair**: direct fill if someone became free; otherwise free a faculty member blocked only by
+  cross-session limits by moving one of their other duties to the cheapest legal replacement.
+  The pairwise *improvement pass* from §4 is **not implemented**: the quadratic load cost already
+  gives near-equal shares (max − min ≤ 2 on the 300-faculty benchmark).
+- **Validation**: every assignment is re-checked against all others; a violation throws and
+  nothing is saved (`ALLOCATION_FAILED`, 500).
+- **Explanations**: per assignment the number of eligible faculty, duties before it and accepted
+  penalties; per unfilled hall/role the first-failing reason counts and suggestions for rules
+  that are the *only* obstacle for some faculty.
+- **Measured**: 300 faculty × 60 sessions × 25 halls × 2 = 3000 positions in ≈0.5 s (unit test
+  `handlesACollegeSizedPeriodQuicklyAndFairly`, limit 5 s). Determinism is tested by shuffling
+  input order.
+- **Storage**: each generation stores an `allocation_run` and replaces the period's DRAFT
+  `duty_chart` (version numbers keep increasing) with `duty_assignment` and `unfilled_position`
+  rows. The chart records the policy version and an input fingerprint (`ProblemFingerprint`); the
+  review shows `policyChanged` / `inputsChanged` instead of silently re-allocating.
+
 ## 9. Escape hatch
 
 If real data shows the greedy/repair approach leaves too many gaps, the `engine` boundary

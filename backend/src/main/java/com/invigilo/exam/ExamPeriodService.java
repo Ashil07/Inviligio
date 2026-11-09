@@ -174,6 +174,11 @@ public class ExamPeriodService {
         return sessions.findByPeriodIdOrderBySessionDateAscStartTimeAsc(periodId);
     }
 
+    @Transactional
+    public void markAllocating(UUID periodId) {
+        findPeriod(periodId).startAllocating();
+    }
+
     // ---- lookups and rules ----
 
     @Transactional(readOnly = true)

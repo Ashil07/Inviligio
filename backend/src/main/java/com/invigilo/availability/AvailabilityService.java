@@ -220,6 +220,23 @@ public class AvailabilityService {
                 .collect(Collectors.toSet());
     }
 
+    /** Approved unavailability for many sessions at once: session id -> faculty ids. */
+    @Transactional(readOnly = true)
+    public Map<UUID, Set<UUID>> unavailabilityBySession(List<ExamSession> sessions) {
+        Map<UUID, Set<UUID>> out = new HashMap<>();
+        if (sessions.isEmpty()) return out;
+        LocalDate from = sessions.stream().map(ExamSession::getSessionDate).min(LocalDate::compareTo).orElseThrow();
+        LocalDate to = sessions.stream().map(ExamSession::getSessionDate).max(LocalDate::compareTo).orElseThrow();
+        List<AvailabilityRequest> approved = requests.findActiveBetween(from, to).stream()
+                .filter(r -> r.getStatus() == Status.APPROVED).toList();
+        for (ExamSession s : sessions) {
+            Set<UUID> ids = new HashSet<>();
+            for (AvailabilityRequest r : approved) if (r.covers(s)) ids.add(r.getFaculty().getId());
+            out.put(s.getId(), ids);
+        }
+        return out;
+    }
+
     // ---- helpers ----
 
     private record Resolved(LocalDate from, LocalDate to, ExamSession session) {}

@@ -300,7 +300,7 @@ Any member can read the timetable; only EXAM_CELL_ADMIN changes it.
 - Not built yet: `availability_override` (exam cell overriding approved unavailability for one
   session, with a reason). It belongs with manual chart editing (M9).
 
-**Allocation and charts**
+**Allocation and charts** *(M7, `allocation/`, migration V8; see ALLOCATION_ENGINE.md §8a)*
 - `allocation_run` — period, policy_id, status, started/finished, input hash, stats `jsonb`,
   unfilled count, created_by. One row per "Generate" click.
 - `duty_chart` — period, version, status (`DRAFT`, `PUBLISHED`, `SUPERSEDED`), policy_id,

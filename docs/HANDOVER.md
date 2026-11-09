@@ -179,6 +179,28 @@ should use composite FKs to `subject (college_id, id)` and `faculty (college_id,
 
 ---
 
+## M7 Allocation engine: done  (2026-11-09)
+
+**Built**
+- `allocation/engine/` (pure Java): `AllocationProblem`, `AllocationEngine`, `Hungarian`, `Reason`,
+  `AllocationResult`, `ProblemFingerprint`.
+- Migration `V8__allocation`: `allocation_run`, `duty_chart` (one DRAFT / one PUBLISHED per period),
+  `duty_assignment`, `unfilled_position`.
+- `AllocationService`: builds the problem from schedule, staffing, faculty, restrictions, approved
+  unavailability, historical published duties and the latest policy; stores runs and charts;
+  `GET/POST /api/v1/exam-periods/{id}/duty-chart[/generate]`. Faculty with duties cannot be deleted.
+
+**Verified**
+- 15 new tests (9 engine unit tests incl. determinism, repair and the 300-faculty benchmark; 6
+  integration tests incl. hard rules on real data, regeneration, stale detection, explanations,
+  roles and isolation). Backend total 143.
+
+**Not done / known limits**
+- Improvement (pairwise swap) pass not implemented (see ALLOCATION_ENGINE.md §8a).
+- Generation is synchronous; fine at college scale (< 1 s).
+
+---
+
 ## Developer 1 → Developer 2  (date)
 
 **Completed milestones:**  

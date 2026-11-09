@@ -256,6 +256,25 @@ public class FacultyService {
 
     // ---- lookups for other features ----
 
+    /** What allocation needs to know about one active faculty member. */
+    public record AllocationFacts(Faculty faculty, java.util.Set<UUID> subjectIds, List<FacultyRestriction> restrictions) {}
+
+    @Transactional(readOnly = true)
+    public List<AllocationFacts> allocationFacts() {
+        Map<UUID, java.util.Set<UUID>> subjectsByFaculty = new HashMap<>();
+        for (FacultySubject fs : facultySubjects.findAll()) {
+            subjectsByFaculty.computeIfAbsent(fs.getFaculty().getId(), k -> new java.util.HashSet<>()).add(fs.getSubject().getId());
+        }
+        Map<UUID, List<FacultyRestriction>> restrictionsByFaculty = new HashMap<>();
+        for (FacultyRestriction r : restrictions.findAll()) {
+            restrictionsByFaculty.computeIfAbsent(r.getFaculty().getId(), k -> new java.util.ArrayList<>()).add(r);
+        }
+        return repository.findByActiveTrue().stream()
+                .map(f -> new AllocationFacts(f, subjectsByFaculty.getOrDefault(f.getId(), java.util.Set.of()),
+                        restrictionsByFaculty.getOrDefault(f.getId(), List.of())))
+                .toList();
+    }
+
     /** Employee code → id and email → employee code of every faculty record (tenant), for CSV import checks. */
     public record ExistingKeys(Map<String, UUID> idByCode, Map<String, String> codeByEmail) {}
 

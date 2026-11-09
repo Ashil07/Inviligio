@@ -108,6 +108,12 @@ public class ScheduleService {
         }).toList();
     }
 
+    /** Session halls of the given sessions with seating, exams and subjects loaded (for allocation). */
+    @Transactional(readOnly = true)
+    public List<SessionHall> sessionHallsFor(java.util.Collection<UUID> sessionIds) {
+        return sessionIds.isEmpty() ? List.of() : sessionHalls.findWithExamsBySessionIdIn(sessionIds);
+    }
+
     // ---- exams ----
 
     @Transactional

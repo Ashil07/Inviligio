@@ -52,8 +52,14 @@ export function PeriodDetailPage() {
       />
       {problem && <ErrorAlert>{problem}</ErrorAlert>}
       {panel === 'edit' && <PeriodForm period={p} onDone={() => setPanel(null)} />}
-      <div className="flex gap-2">
-        <Button onClick={() => setPanel('session')}>Add session</Button>
+      <div className="flex flex-wrap gap-2">
+        <Link
+          to={`/admin/exams/${p.id}/allocation`}
+          className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
+        >
+          Allocate duties
+        </Link>
+        <Button variant="secondary" onClick={() => setPanel('session')}>Add session</Button>
         <Button variant="secondary" onClick={() => setPanel('generate')}>Generate sessions</Button>
       </div>
       {panel === 'session' && <AddSession period={p} onDone={() => setPanel(null)} />}

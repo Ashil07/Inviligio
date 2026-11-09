@@ -489,7 +489,7 @@ public final class AllocationEngine {
                 List<String> suggestions = new ArrayList<>();
                 onlyReason.entrySet().stream()
                         .sorted(Map.Entry.<Reason, Integer>comparingByValue().reversed().thenComparing(Map.Entry.comparingByKey()))
-                        .forEach(e -> suggestions.add(e.getValue() + " faculty are blocked only because they are "
+                        .forEach(e -> suggestions.add(e.getValue() + " faculty are blocked only because they "
                                 + e.getKey().description() + "; relaxing that rule in the policy would make them eligible."));
                 if (eliminated.getOrDefault(Reason.BUSY_IN_SESSION, 0) > 0 && onlyReason.isEmpty()) {
                     suggestions.add("Everyone else who could take it is already on duty at this time; add faculty, "

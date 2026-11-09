@@ -201,6 +201,18 @@ should use composite FKs to `subject (college_id, id)` and `faculty (college_id,
 
 ---
 
+## M8 Basic allocation review: done  (2026-11-09)
+
+- Frontend `features/allocation/` (`AllocationPage`, `api.ts`), linked from the period page
+  ("Allocate duties"). Shows draft version and policy version, warns when inputs or policy changed,
+  statistics, unfilled positions (reason counts + suggestions), the chart per date/session/hall with
+  an expandable explanation per duty, and the workload table.
+- 3 frontend tests (generate first chart, stale warnings + confirm before replacing, refusal message);
+  frontend total 63. Reason wording reworked so suggestions read as sentences.
+- Not verified in a browser against a running backend (database deferred to Developer 2).
+
+---
+
 ## Developer 1 → Developer 2  (date)
 
 **Completed milestones:**  

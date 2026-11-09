@@ -135,6 +135,16 @@ The same `HardConstraint`/`SoftConstraint` classes drive:
 | Swap workflow | both sides re-validated inside the transaction before commit |
 | Emergency substitute | hard filter + ranking by cost, with per-candidate reasons |
 
+**As implemented (M9):** there are no separate constraint classes. `engine/ChartChecker` loads an
+existing chart into the engine's own `Run` (package-private) and calls the same `reasons(...)` and
+`cost(...)` methods generation uses, so the rules cannot drift. It offers `check` (hard reasons +
+soft-cost notes + a workload warning when the person would end up more than one duty above the
+weight-adjusted average), `alternatives` (legal candidates by cost; no look-ahead term),
+`violations` (every loaded duty against the rest; the generator's final validation uses the same
+method) and `explainOpen` (the unfilled-position funnel for a vacant seat). Edits are judged with
+the policy version the chart was generated with. Swaps (M13) and substitutes (M14) should use
+`ChartChecker` too.
+
 Each constraint returns a structured result (`code`, `severity`, message params), e.g.
 `OVERLAPPING_DUTY {otherHall: "H-204", session: "12 Nov FN"}`. Messages are rendered in the UI from
 the code, so the backend stays the source of truth.

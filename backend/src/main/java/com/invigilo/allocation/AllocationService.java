@@ -8,6 +8,7 @@ import com.invigilo.allocation.engine.AllocationProblem.SessionSlot;
 import com.invigilo.allocation.engine.AllocationResult;
 import com.invigilo.allocation.engine.AllocationResult.Explanation;
 import com.invigilo.allocation.engine.AllocationResult.Role;
+import com.invigilo.allocation.engine.ChartChecker;
 import com.invigilo.allocation.engine.ProblemFingerprint;
 import com.invigilo.audit.AuditService;
 import com.invigilo.availability.AvailabilityService;
@@ -61,7 +62,7 @@ public class AllocationService {
     private static final Logger log = LoggerFactory.getLogger(AllocationService.class);
 
     public record DutyView(UUID assignmentId, UUID facultyId, String facultyCode, String facultyName, String departmentCode,
-                           Role role, DutyAssignment.Source source, Explanation explanation) {}
+                           Role role, DutyAssignment.Source source, Explanation explanation, long version) {}
 
     public record HallView(UUID sessionHallId, String hallCode, String hallName, int required, int missing,
                            List<DutyView> duties) {}
@@ -73,16 +74,23 @@ public class AllocationService {
                                Role role, int missing, UnfilledPosition.Reasoning reason) {}
 
     public record WorkloadRow(UUID facultyId, String code, String name, String departmentCode, int duties, int chiefDuties,
-                              BigDecimal dutyWeight) {}
+                              BigDecimal dutyWeight, boolean active) {}
+
+    /**
+     * A duty in the chart that breaks a hard rule now, e.g. leave approved after generation.
+     * {@code reasons} are {@link com.invigilo.allocation.engine.Reason} names, or {@code FACULTY_INACTIVE}.
+     */
+    public record IssueView(UUID assignmentId, LocalDate date, String sessionLabel, String hallCode, String facultyName,
+                            List<String> reasons) {}
 
     public record ChartView(UUID id, UUID periodId, String periodName, int chartVersion, DutyChart.Status status,
                             Instant generatedAt, Integer policyVersion, boolean policyChanged, boolean inputsChanged,
                             AllocationResult.Stats stats, List<SessionView> sessions, List<UnfilledView> unfilled,
-                            List<WorkloadRow> workload) {}
+                            List<WorkloadRow> workload, List<IssueView> issues) {}
 
     /** The problem plus what is needed to store and explain its result. */
-    private record Built(AllocationProblem problem, CollegePolicy policy, Map<UUID, SessionHall> sessionHalls,
-                         Map<UUID, Faculty> faculty) {}
+    record Built(AllocationProblem problem, CollegePolicy policy, Map<UUID, SessionHall> sessionHalls,
+                 Map<UUID, Faculty> faculty) {}
 
     private final ExamPeriodService periods;
     private final ScheduleService schedule;
@@ -155,10 +163,8 @@ public class AllocationService {
         assignments.saveAll(rows);
         List<UnfilledPosition> gaps = new ArrayList<>();
         for (AllocationResult.Unfilled u : result.unfilled()) {
-            Map<String, Integer> eliminated = new LinkedHashMap<>();
-            u.eliminated().forEach((reason, n) -> eliminated.put(reason.name(), n));
             gaps.add(new UnfilledPosition(chart.getId(), built.sessionHalls().get(u.sessionHallId()), u.role(), u.missing(),
-                    new UnfilledPosition.Reasoning(u.totalFaculty(), eliminated, u.suggestions())));
+                    reasoning(u)));
         }
         unfilled.saveAll(gaps);
         periods.markAllocating(periodId);
@@ -180,7 +186,7 @@ public class AllocationService {
         return view(chart, period);
     }
 
-    private ChartView view(DutyChart chart, ExamPeriod period) {
+    ChartView view(DutyChart chart, ExamPeriod period) {
         List<DutyAssignment> duties = assignments.findForChart(chart.getId());
         List<UnfilledPosition> gaps = unfilled.findForChart(chart.getId());
         List<ExamSession> sessions = periods.sessionsOf(period.getId());
@@ -227,12 +233,16 @@ public class AllocationService {
                 .map(f -> {
                     int[] c = counts.getOrDefault(f.getId(), new int[2]);
                     return new WorkloadRow(f.getId(), f.getEmployeeCode(), f.getFullName(), f.getDepartment().getCode(), c[0], c[1],
-                            f.getDutyWeight());
+                            f.getDutyWeight(), f.isActive());
                 })
                 .sorted(Comparator.comparingInt(WorkloadRow::duties).reversed().thenComparing(WorkloadRow::name))
                 .toList();
 
         AllocationRun run = chart.getAllocationRunId() == null ? null : runs.findById(chart.getAllocationRunId()).orElse(null);
+        int activeFaculty = (int) workload.stream().filter(w -> w.active()).count();
+        AllocationResult.Stats stats = liveStats(sessionViews, duties.size(), activeFaculty, workload,
+                run == null || run.getStats() == null ? 0 : run.getStats().elapsedMillis());
+        List<IssueView> issues = issues(duties, buildForChart(period, chart));
         var latestPolicy = policies.latest();
         UUID latestPolicyId = latestPolicy.map(CollegePolicy::getId).orElse(null);
         Integer policyVersion = latestPolicy.filter(p -> p.getId().equals(chart.getPolicyId())).map(CollegePolicy::getPolicyVersion)
@@ -241,19 +251,89 @@ public class AllocationService {
                 && !ProblemFingerprint.of(build(period).problem()).equals(chart.getInputHash());
         return new ChartView(chart.getId(), period.getId(), period.getName(), chart.getChartVersion(), chart.getStatus(),
                 chart.getCreatedAt(), policyVersion, !Objects.equals(latestPolicyId, chart.getPolicyId()), inputsChanged,
-                run == null ? null : run.getStats(), sessionViews, gapViews, workload);
+                stats, sessionViews, gapViews, workload, issues);
     }
 
     private static DutyView dutyView(DutyAssignment d) {
         Faculty f = d.getFaculty();
         return new DutyView(d.getId(), f.getId(), f.getEmployeeCode(), f.getFullName(), f.getDepartment().getCode(), d.getRole(),
-                d.getSource(), d.getExplanation());
+                d.getSource(), d.getExplanation(), d.getVersion());
+    }
+
+    /** Statistics of the chart as it is now (over active faculty), so they stay right after manual edits. */
+    private static AllocationResult.Stats liveStats(List<SessionView> sessions, int filled, int activeFaculty,
+                                                    List<WorkloadRow> workload, long elapsedMillis) {
+        int positions = sessions.stream().flatMap(s -> s.halls().stream()).mapToInt(HallView::required).sum();
+        int[] counts = workload.stream().filter(WorkloadRow::active).mapToInt(WorkloadRow::duties).toArray();
+        int n = counts.length;
+        int min = n == 0 ? 0 : java.util.Arrays.stream(counts).min().orElse(0);
+        int max = java.util.Arrays.stream(counts).max().orElse(0);
+        double mean = n == 0 ? 0 : java.util.Arrays.stream(counts).sum() / (double) n;
+        double variance = n == 0 ? 0 : java.util.Arrays.stream(counts).mapToDouble(c -> Math.pow(c - mean, 2)).sum() / n;
+        return new AllocationResult.Stats(positions, filled, activeFaculty, min, max, round2(mean), round2(Math.sqrt(variance)),
+                elapsedMillis);
+    }
+
+    private static double round2(double v) {
+        return Math.round(v * 100) / 100.0;
+    }
+
+    /** Duties that break a hard rule against the rest of the chart, or belong to inactive faculty. */
+    private static List<IssueView> issues(List<DutyAssignment> duties, Built built) {
+        ChartChecker checker = new ChartChecker(built.problem(), placements(duties));
+        Map<String, DutyAssignment> byPlacement = new HashMap<>();
+        duties.forEach(d -> byPlacement.put(key(placement(d)), d));
+        List<IssueView> out = new ArrayList<>();
+        for (ChartChecker.Violation v : checker.violations()) {
+            out.add(issue(byPlacement.get(key(v.placement())), v.reasons().stream().map(Enum::name).toList()));
+        }
+        for (ChartChecker.Placement p : checker.skipped()) out.add(issue(byPlacement.get(key(p)), List.of("FACULTY_INACTIVE")));
+        out.sort(Comparator.comparing(IssueView::date).thenComparing(IssueView::sessionLabel).thenComparing(IssueView::hallCode)
+                .thenComparing(IssueView::facultyName));
+        return out;
+    }
+
+    private static IssueView issue(DutyAssignment d, List<String> reasons) {
+        SessionHall sh = d.getSessionHall();
+        return new IssueView(d.getId(), sh.getSession().getSessionDate(), sh.getSession().getLabel(), sh.getHall().getCode(),
+                d.getFaculty().getFullName(), reasons);
+    }
+
+    private static String key(ChartChecker.Placement p) {
+        return p.sessionHallId() + "/" + p.facultyId() + "/" + p.role();
+    }
+
+    static ChartChecker.Placement placement(DutyAssignment d) {
+        return new ChartChecker.Placement(d.getSessionHall().getId(), d.getFaculty().getId(), d.getRole());
+    }
+
+    static List<ChartChecker.Placement> placements(List<DutyAssignment> duties) {
+        return duties.stream().map(AllocationService::placement).toList();
+    }
+
+    /** How an unfilled position is stored. */
+    static UnfilledPosition.Reasoning reasoning(AllocationResult.Unfilled u) {
+        Map<String, Integer> eliminated = new LinkedHashMap<>();
+        u.eliminated().forEach((reason, n) -> eliminated.put(reason.name(), n));
+        return new UnfilledPosition.Reasoning(u.totalFaculty(), eliminated, u.suggestions());
     }
 
     // ---- building the problem ----
 
     private Built build(ExamPeriod period) {
-        CollegePolicy policyRow = policies.latest().orElse(null);
+        return build(period, policies.latest().orElse(null), false);
+    }
+
+    /**
+     * The problem for checking edits to {@code chart}: the policy version it was generated with,
+     * and every session hall of the period, including those that need nobody under current staffing.
+     */
+    Built buildForChart(ExamPeriod period, DutyChart chart) {
+        CollegePolicy policy = policies.find(chart.getPolicyId()).or(policies::latest).orElse(null);
+        return build(period, policy, true);
+    }
+
+    private Built build(ExamPeriod period, CollegePolicy policyRow, boolean includeEmptyHalls) {
         PolicySettings policy = policyRow == null ? PolicySettings.defaults() : policyRow.getSettings();
         List<ExamSession> sessions = periods.sessionsOf(period.getId());
         Map<UUID, List<SessionHall>> hallsBySession = schedule.sessionHallsFor(sessions.stream().map(ExamSession::getId).toList())
@@ -274,7 +354,7 @@ public class AllocationService {
                 }
                 Staffing staffing = Staffing.compute(policy, sh.getHall().getMinInvigilators(), sh.totalStudents(), practical,
                         sh.getRequiredOverride(), sh.getOverrideReason());
-                if (staffing.total() == 0) continue;
+                if (staffing.total() == 0 && !includeEmptyHalls) continue;
                 sessionHalls.put(sh.getId(), sh);
                 halls.add(new HallSlot(sh.getId(), sh.getHall().getId(), sh.getHall().getCode(), Set.copyOf(subjects),
                         Set.copyOf(departments), staffing.invigilators(), staffing.chief()));

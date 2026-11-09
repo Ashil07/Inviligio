@@ -18,7 +18,8 @@ swaps or substitutes. Current state and next milestone: `docs/HANDOVER.md`, `doc
   `college_id` explicitly. Other-college resources return 404. Every new tenant resource gets a
   tenant-isolation test.
 - **Hard constraints are never violated** — not by the generator, editor, swaps or substitutes.
-  All four use the same constraint classes in `allocation/engine/constraint`. Don't duplicate rules.
+  All four use the engine's own rules: generation via `AllocationEngine`, everything else via
+  `allocation/engine/ChartChecker` (which reuses the engine's `Run`). Don't duplicate rules.
 - The allocation engine (`allocation/engine`) is pure Java: no Spring, JPA, clock or randomness.
 - Schema changes only via a new Flyway migration; never edit a merged migration. `ddl-auto=validate`.
 - Tables live in schema `invigilo`, never `public` (Supabase exposes `public`).

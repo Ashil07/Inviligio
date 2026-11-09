@@ -51,6 +51,12 @@ public class PolicyService {
         return repository.findFirstByOrderByPolicyVersionDesc();
     }
 
+    /** A specific saved version, e.g. the one a duty chart was generated with. */
+    @Transactional(readOnly = true)
+    public Optional<CollegePolicy> find(UUID policyId) {
+        return policyId == null ? Optional.empty() : repository.findById(policyId);
+    }
+
     @Transactional(readOnly = true)
     public boolean hasSavedPolicy() {
         return repository.findFirstByOrderByPolicyVersionDesc().isPresent();

@@ -46,7 +46,7 @@ merged. If two branches race for the same number, the later one renumbers before
 | M6 | Availability | **Done.** Faculty request whole days or single sessions within policy limits; HOD (own department) or exam cell approves; exam cell records leave for anyone; cancellation; per-session overview; faculty, HOD and exam-cell pages. Admin override of approved unavailability moves to M9. |
 | M7 | Allocation engine | **Done.** Pure-Java engine (hard rules, soft costs, per-group Hungarian, look-ahead, repair, validation, explanations), runs and DRAFT charts persisted with policy version and input fingerprint. 3000 positions in ~0.5 s. |
 | M8 | Basic allocation review | **Done.** `/admin/exams/:periodId/allocation`: generate/regenerate (confirmed), stale-draft and newer-policy warnings, fill statistics, unfilled positions with reasons and suggestions, chart grid per date with per-duty explanations, workload table. |
-| H1 | Handover | Fill in [HANDOVER.md](HANDOVER.md); demo seed data script; all CI green. |
+| H1 | Handover | **Done** except pushing: HANDOVER.md filled in; demo data loader (`demo` profile) with an end-to-end allocation test; all tests green locally. CI has not run because there is no GitHub remote yet. |
 
 **Database hosting is deferred to Developer 2** (product owner decision, 2026-11-08). Developer 1
 builds and verifies everything against embedded PostgreSQL in tests; nothing requires Supabase or a
@@ -66,6 +66,9 @@ Start Developer 2 when all of these are true:
 3. A demo seed (one college with departments, subjects, halls, ~50 faculty, one exam period)
    can be loaded, so Developer 2 can see real charts immediately.
 4. `main` is green in CI and everything is committed and pushed to GitHub.
+
+Status 2026-11-09: 1-3 are done; 4 is not (no GitHub remote yet). Pushing is the first step of
+Developer 2's first day if it has not been done before.
 
 Developer 2's first day: clone, `graphify hook install`, `graphify update .`, read HANDOVER.md
 and GRAPH_REPORT.md, connect Supabase (ARCHITECTURE.md §10), load the seed, click through every

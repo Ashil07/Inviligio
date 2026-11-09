@@ -39,6 +39,7 @@ swaps or substitutes. Current state and next milestone: `docs/HANDOVER.md`, `doc
   context inside an open transaction. New tenant entities extend `TenantScopedEntity`.
 - Integration tests extend `support/IntegrationTest` (embedded PostgreSQL, no Docker). Use unique test data.
 - The hosted database (Supabase) is connected later by Developer 2; don't add a dependency on it.
+- Demo data: `demo/DemoData` (profile `demo`); keep it loadable when schemas change (`DemoDataIntegrationTest`).
 - Don't claim something works without running it.
 
 ## graphify

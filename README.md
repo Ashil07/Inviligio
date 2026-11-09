@@ -43,6 +43,11 @@ npm run dev
 
 Open http://localhost:5173/register to create a college, or `/status` for API/database status.
 
+To start with realistic data instead, set `DEMO_ADMIN_EMAIL` and `DEMO_ADMIN_PASSWORD` in
+`backend/.env` and run the backend once with `SPRING_PROFILES_ACTIVE=demo`: it creates college
+`DEMO` (50 faculty, a seated exam week). Sign in with those credentials and open
+*Examinations → Allocate duties*.
+
 ## Test
 
 ```bash

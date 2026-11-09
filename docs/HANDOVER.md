@@ -213,15 +213,91 @@ should use composite FKs to `subject (college_id, id)` and `faculty (college_id,
 
 ---
 
-## Developer 1 → Developer 2  (date)
+## Developer 1 → Developer 2  (2026-11-09)
 
-**Completed milestones:**  
-**Endpoints (see `/swagger-ui.html`):**  
-**Database migrations (latest version):**  
-**Policy settings implemented (vs ALLOCATION_ENGINE.md §3):**  
-**Allocation engine status (constraints implemented, performance measured):**  
-**Known bugs / limitations:**  
-**Deviations from ARCHITECTURE.md and why:**  
-**Seed / demo data (how to load, test accounts location):**  
-**Product questions answered (Q#: answer):**  
-**Suggested first task for Developer 2:**  
+**Completed milestones:** M0-M8 and H1 (this section). Commits on `main`, one per milestone:
+foundation `a73e147`, M1 `875624f`, M2 `ee8b53f`, M3 `dc558ed`, M4 `9e1dcdc`, M5 `b36fe4e`,
+M6 `b3dab3f`, M7 `9954f70`, M8 `727ec38`, H1 (this commit).
+
+**Test status:** backend 144 tests (`./mvnw verify`, embedded PostgreSQL 17, no Docker needed);
+frontend 63 tests (`npm test`), lint and production build clean. **CI has never run**: the
+repository has no GitHub remote yet (see "Before you start").
+
+**Endpoints** (full contract: `/swagger-ui.html` and `/v3/api-docs` once the app runs):
+
+| Area | Endpoints | Who |
+|---|---|---|
+| Auth | `POST /api/v1/auth/{register-college,login,refresh,logout}`, `GET /auth/me`, `POST /auth/invitations/{preview,accept}` | public / signed in |
+| College & policy | `GET/PUT /api/v1/college`, `POST /college/complete-onboarding`, `GET/PUT /api/v1/policy`, `GET /policy/versions[/{n}]` | read: all; write: admin |
+| Academic | `/api/v1/departments`, `/api/v1/subjects`, `/api/v1/halls` (CRUD) | read: all; write: admin |
+| Faculty | `/api/v1/faculty` (CRUD, search), `/faculty/{id}/restrictions`, `/faculty/{id}/access[/invitation]` | admin |
+| Import | `POST /api/v1/imports/{type}?dryRun=`, `GET /imports/{type}/template` | admin |
+| Timetable | `/api/v1/exam-periods[/{id}/sessions[/bulk]]`, `/api/v1/exam-sessions/{id}[/exams,/halls]`, `/api/v1/exams/{id}`, `/api/v1/session-halls/{id}` | read: all; write: admin |
+| Availability | `GET/POST /api/v1/me/availability`, `POST /availability/{id}/cancel`, `GET/POST /api/v1/availability`, `POST /availability/{id}/{approve,reject}`, `GET /exam-periods/{id}/availability` | faculty / HOD / admin |
+| Allocation | `GET /api/v1/exam-periods/{id}/duty-chart`, `POST .../duty-chart/generate` | admin |
+
+**Database migrations:** V1-V8 (latest `V8__allocation`). All tables in schema `invigilo`, every
+tenant table has `college_id` and composite same-college foreign keys.
+
+**Policy settings implemented:** all of ALLOCATION_ENGINE.md §3 are stored, validated and editable,
+and used by the engine. The availability and swap settings are stored; availability rules are
+enforced (M6); **swap settings are not used yet** (M13).
+
+**Allocation engine status:** every hard rule and soft cost in ALLOCATION_ENGINE.md §8a is
+implemented and tested. Per-group optimal assignment, look-ahead, repair pass, full validation,
+explanations. Measured: 3000 positions / 300 faculty in ~0.5 s. The demo college (≈100
+positions) fills completely. Not implemented: the pairwise improvement pass (not needed so far).
+
+**What the DRAFT chart gives you for M9-M10:** `duty_chart` (one DRAFT per period, `chart_version`
+keeps counting, `policy_id`, `input_hash`), `duty_assignment` (`role`, `source` = AUTO,
+`status` = ASSIGNED, `explanation` jsonb), `unfilled_position` (`reason` jsonb).
+`AllocationService.view()` already reports `inputsChanged` / `policyChanged`. Statuses PUBLISHED /
+SUPERSEDED and `published_by/at` exist in the schema but nothing sets them: that is M10.
+For the editor (M9), reuse the engine's rules rather than writing new checks: the cleanest path is
+to expose a public "check this one assignment against the rest of the chart" method built from
+`AllocationEngine.Run.reasons(...)` (today it is private to the engine run).
+
+**Known limitations:**
+- Nothing has been exercised in a browser against a running backend: the database connection was
+  deferred to Developer 2. All UI is tested with mocked API responses; all API is tested for real.
+- Access tokens keep their roles for up to 15 minutes after a role change or disable.
+- No email or notifications (Q8); invitation links are copied by the admin.
+- No login rate limiting (risk R10).
+- Wizard policy answers are lost if the admin leaves the onboarding wizard midway.
+- Overlap groups are conservative: with a chain of partly overlapping sessions a person gets at most
+  one duty across the whole chain.
+- `availability_override` (exam cell overriding approved leave for one session) is not built (M9).
+
+**Deviations from ARCHITECTURE.md:** integration tests use embedded PostgreSQL instead of
+Testcontainers (no Docker on the development machine; still real PostgreSQL). College
+registration moved from M2 into M1. Policy versions use `policy_version` (not `version`, which is
+the optimistic-lock column everywhere). Overrides of unavailability moved to M9.
+
+**Seed / demo data:** `demo/DemoData` creates college `DEMO` through the normal services: 5
+departments, 20 subjects, 12 halls (2 labs), 50 faculty (visiting, reduced weight and two
+restrictions included), a saved default policy, a one-week exam period starting two weeks from
+the load date with 10 sessions, seated exams (mixed seating, one practical) and 5 leave records.
+Load it with the `demo` profile and the two `DEMO_*` variables from `backend/.env.example`
+(the exam-cell login is the email/password you put there):
+
+```bash
+cd backend
+SPRING_PROFILES_ACTIVE=demo ./mvnw spring-boot:run
+```
+
+It is idempotent (does nothing if `DEMO` exists) and covered by `DemoDataIntegrationTest`, which
+also generates the chart and checks every position is filled.
+
+**Product questions:** Q1-Q10 in DEVELOPMENT_PLAN.md §5 are still open; the working defaults are
+implemented (Q4: both seniority options exist; Q8: in-app only).
+
+**Before you start (Developer 2):**
+1. Create the GitHub repository, add it as `origin`, push `main`, and check that CI goes green
+   (it has never run).
+2. Connect Supabase (ARCHITECTURE.md §10: session pooler, `backend/.env`), start the backend and
+   frontend, load the demo data, and click through every admin, HOD and faculty page once. Expect
+   small UI issues: this is the first time the UI meets a real API.
+3. `graphify hook install`, `graphify update .`, read `graphify-out/GRAPH_REPORT.md`.
+
+**Suggested first task for Developer 2:** M9, starting with the shared single-assignment
+validator described above, then the editor UI on top of `AllocationPage`.

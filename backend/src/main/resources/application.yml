@@ -79,3 +79,7 @@ invigilo:
       cookie-secure: ${REFRESH_COOKIE_SECURE:true}
     cors:
       allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+  # Only read with the 'demo' profile (DemoDataRunner).
+  demo:
+    admin-email: ${DEMO_ADMIN_EMAIL:}
+    admin-password: ${DEMO_ADMIN_PASSWORD:}

@@ -84,5 +84,5 @@ public final class AuthDtos {
     public record LoginResponse(LoginStatus status, AuthResponse auth, List<CollegeOption> colleges) {}
 
     /** Internal result of issuing a session; {@code refreshToken} is null when the cookie must stay unchanged. */
-    record IssuedSession(SessionInfo session, String accessToken, Instant accessTokenExpiresAt, String refreshToken) {}
+    public record IssuedSession(SessionInfo session, String accessToken, Instant accessTokenExpiresAt, String refreshToken) {}
 }

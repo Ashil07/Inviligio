@@ -343,6 +343,16 @@ colleagues in the same hall. `GET /api/v1/me/duties.ics` returns them as an RFC 
 (UTC times, escaped and folded lines). The faculty member comes from the caller's membership
 (`NOT_A_FACULTY_MEMBER` 403 when the login is not linked), so nobody can ask for someone else's.
 
+HOD view *(M12, `allocation/DepartmentDashboardService`)*: `GET /api/v1/department/overview
+[?periodId=]` (role HOD) shows the head's own department (the department of their linked faculty
+record, else `NO_DEPARTMENT_SCOPE` 403) in one PUBLISHED chart: the periods that have one (the
+latest by start date by default), every department member with duties, chief duties, even share and
+`load` (UNDER/BALANCED/OVER, null when inactive), and the department's duties. Workload uses the
+engine's own rule `ChartChecker.load(duties, collegeAverage, dutyWeight)`, the same one behind the
+editor's workload warning; the average is the chart's non-cancelled duties over the college's active
+faculty. A period with no published chart (or another college's) is `PUBLISHED_CHART_NOT_FOUND` 404.
+Pending leave comes from the existing `GET /api/v1/availability?status=PENDING` (already HOD-scoped).
+
 Lifecycle: a DRAFT is freely editable (every edit validated). Publishing freezes it as a version.
 After publishing, assignments change only through controlled workflows (swap, substitute, admin
 reassignment) — each runs the same validator and writes `audit_log`. A larger rework goes through a

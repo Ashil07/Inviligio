@@ -33,6 +33,8 @@ interface DutyChartRepository extends JpaRepository<DutyChart, UUID> {
 
     List<DutyChart> findByPeriodIdOrderByChartVersionDesc(UUID periodId);
 
+    List<DutyChart> findByStatus(DutyChart.Status status);
+
     @Query("select coalesce(max(c.chartVersion), 0) from DutyChart c where c.periodId = :periodId")
     int maxVersion(UUID periodId);
 }

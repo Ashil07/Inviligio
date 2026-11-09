@@ -235,6 +235,8 @@ repository has no GitHub remote yet (see "Before you start").
 | Timetable | `/api/v1/exam-periods[/{id}/sessions[/bulk]]`, `/api/v1/exam-sessions/{id}[/exams,/halls]`, `/api/v1/exams/{id}`, `/api/v1/session-halls/{id}` | read: all; write: admin |
 | Availability | `GET/POST /api/v1/me/availability`, `POST /availability/{id}/cancel`, `GET/POST /api/v1/availability`, `POST /availability/{id}/{approve,reject}`, `GET /exam-periods/{id}/availability` | faculty / HOD / admin |
 | Allocation | `GET /api/v1/exam-periods/{id}/duty-chart`, `POST .../duty-chart/generate` | admin |
+| My duties (M11) | `GET /api/v1/me/duties`, `GET /api/v1/me/duties.ics` | linked faculty |
+| Department (M12) | `GET /api/v1/department/overview[?periodId=]` | HOD |
 
 **Database migrations:** V1-V8 (latest `V8__allocation`). All tables in schema `invigilo`, every
 tenant table has `college_id` and composite same-college foreign keys.
@@ -407,3 +409,34 @@ Merged before this: pull requests #1 (leave-form fix) and #2 (M9); CI passed on 
   Marking attendance belongs with remuneration (M17, product question Q3).
 - The test clock only moves forward and is shared, so the upcoming/past split is not tested by
   moving time; the split uses session end time in the college's zone.
+
+## M12 HOD dashboard: done  (2026-11-09)
+
+**Built** (branch `feat/hod-dashboard`, no migration)
+- Backend: `DepartmentDashboardService` + `DepartmentDashboardController`
+  (`GET /api/v1/department/overview[?periodId=]`, role HOD). Department = the HOD's linked faculty
+  record's department (`NO_DEPARTMENT_SCOPE` 403 otherwise). Published charts only; unknown or
+  unpublished period → `PUBLISHED_CHART_NOT_FOUND` 404.
+- Engine: the workload rule is now public as `ChartChecker.load(duties, average, dutyWeight)`
+  (UNDER / BALANCED / OVER: more than one duty from an even share). The editor's workload warning
+  and the dashboard both use it, so they always agree.
+- Lookups: `FacultyService.inDepartment`, `activeCount`; `DutyChartRepository.findByStatus`.
+- Frontend: `features/hod/` (`HodDashboard`, `api.ts`) on `/hod`: period picker (when more than one
+  period is published), counts, leave waiting for a decision (existing `/availability?status=PENDING`,
+  link to `/hod/requests`), workload table with badges, and the department's duties.
+- Test support: `ChartScenario.loginAs(code, roles)`.
+
+**Verified**
+- Backend: `DepartmentDashboardIntegrationTest` (3: own department only, before/after publish, the
+  other HOD sees only their department, faculty/exam cell 403, unknown period 404, another college's
+  HOD gets 404 for this college's period) and a `ChartCheckerTest` case for the load rule; full
+  suite 166 green.
+- Frontend: 79 tests (4 new); lint and build clean.
+- In the browser as demo HOD Dr. Asha Menon (CSE): 10 faculty, 19 duties, averages 1.9 / 1.6, the
+  half-weight member's even share 0.8. The demo policy approves leave automatically, so the
+  waiting-leave list was checked by the frontend test, not in the demo.
+
+**Known limits**
+- Swap approvals are part of M13 (swaps do not exist yet); add them to this page then.
+- Over/under compares with the college-wide average of one published chart, not across periods;
+  history across periods belongs to fairness analytics (M15).

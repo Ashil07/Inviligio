@@ -96,7 +96,12 @@ abstract class ChartScenario extends IntegrationTest {
 
     /** Signs in as faculty member {@code code} through the invitation flow; returns their access token. */
     String loginAs(String code) {
-        String token = (String) send(POST, "/api/v1/faculty/" + facultyIds.get(code) + "/access/invitation", Map.of("roles", List.of()))
+        return loginAs(code, List.of());
+    }
+
+    /** As {@link #loginAs(String)}, with extra roles such as {@code HOD}. */
+    String loginAs(String code, List<String> roles) {
+        String token = (String) send(POST, "/api/v1/faculty/" + facultyIds.get(code) + "/access/invitation", Map.of("roles", roles))
                 .getBody().get("token");
         var accepted = http.postForEntity("/api/v1/auth/invitations/accept",
                 TestData.json(Map.of("token", token, "password", "faculty-password")), Map.class);

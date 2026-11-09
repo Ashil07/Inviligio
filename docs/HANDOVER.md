@@ -291,6 +291,11 @@ also generates the chart and checks every position is filled.
 **Product questions:** Q1-Q10 in DEVELOPMENT_PLAN.md §5 are still open; the working defaults are
 implemented (Q4: both seniority options exist; Q8: in-app only).
 
+**Run it without any database setup:** `LocalDevApplication` (test sources) starts the
+backend with an embedded PostgreSQL in `backend/.dev-db`; see README "Run locally". Use it to
+click through the app before Supabase is connected. Note: in Windows, fixed ports can fall in
+Hyper-V reserved ranges, so it picks a free port for the database automatically.
+
 **Before you start (Developer 2):**
 1. Create the GitHub repository, add it as `origin`, push `main`, and check that CI goes green
    (it has never run).

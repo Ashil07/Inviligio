@@ -26,6 +26,25 @@ substitutes, fairness analytics, reports and remuneration. Multi-college (multi-
 
 ## Run locally
 
+### Quickest: no database to install
+
+The backend can run its own embedded PostgreSQL 17 (data kept in `backend/.dev-db`, git-ignored):
+
+```bash
+cd backend
+cp .env.example .env        # set JWT_SECRET (32+ characters)
+./mvnw spring-boot:test-run "-Dspring-boot.run.main-class=com.invigilo.LocalDevApplication"
+```
+
+In PowerShell use `.\mvnw.cmd` instead of `./mvnw`. Add `"-Dspring-boot.run.profiles=demo"` to
+load the demo college (needs `DEMO_ADMIN_EMAIL` and a `DEMO_ADMIN_PASSWORD` of 8+ characters in
+`backend/.env`). The first start takes about a minute; it is ready at `Started InvigiloApplication`.
+Stop it with Ctrl+C (that also stops the embedded database). If it ever reports
+`could not lock ... .dev-db\epg-lock`, a previous backend is still running: stop that process.
+Delete `backend/.dev-db` to start from an empty database. `DB_URL` in `.env` is ignored in this mode.
+
+### With a real database (Docker or Supabase)
+
 ```bash
 # 1. Database (or point backend/.env at Supabase - see the comments in .env.example)
 docker compose up -d

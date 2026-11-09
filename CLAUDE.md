@@ -9,7 +9,7 @@ swaps or substitutes. Current state and next milestone: `docs/HANDOVER.md`, `doc
 
 - Backend: `cd backend && ./mvnw verify` (tests) · `./mvnw spring-boot:run` (needs `backend/.env`, see `.env.example`)
 - Frontend: `cd frontend && npm run dev` · `npm test` · `npm run lint` · `npm run build`
-- Local DB: `docker compose up -d` (repo root)
+- Local DB: `docker compose up -d` (repo root), or no DB at all: `./mvnw spring-boot:test-run "-Dspring-boot.run.main-class=com.invigilo.LocalDevApplication"` (embedded PostgreSQL in `backend/.dev-db`)
 
 ## Non-negotiable rules
 

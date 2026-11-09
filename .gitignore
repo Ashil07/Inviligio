@@ -29,3 +29,6 @@ Thumbs.db
 
 # Claude Code per-machine settings (graphify hooks use absolute paths)
 .claude/settings.local.json
+
+# Local embedded database (LocalDevApplication)
+backend/.dev-db/

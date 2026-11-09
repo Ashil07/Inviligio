@@ -36,4 +36,9 @@ interface FacultyRepository extends JpaRepository<Faculty, UUID>, JpaSpecificati
 
     @EntityGraph(attributePaths = "department")
     List<Faculty> findByActiveTrue();
+
+    @EntityGraph(attributePaths = "department")
+    List<Faculty> findByDepartmentIdOrderByFullName(UUID departmentId);
+
+    long countByActiveTrue();
 }

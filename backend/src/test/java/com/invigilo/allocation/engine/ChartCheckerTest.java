@@ -148,4 +148,19 @@ class ChartCheckerTest {
         assertThat(open.eliminated()).containsEntry(Reason.BUSY_IN_SESSION, 1).containsEntry(Reason.UNAVAILABLE, 1);
         assertThat(open.suggestions()).anyMatch(s -> s.contains("Reduce the invigilators required for B"));
     }
+
+    @Test
+    void loadComparesDutiesWithAnEvenShareForTheDutyWeight() {
+        // Average 4: 3 to 5 duties are balanced, 6 is over, 2 is under.
+        assertThat(ChartChecker.load(5, 4, 1)).isEqualTo(ChartChecker.Load.BALANCED);
+        assertThat(ChartChecker.load(3, 4, 1)).isEqualTo(ChartChecker.Load.BALANCED);
+        assertThat(ChartChecker.load(6, 4, 1)).isEqualTo(ChartChecker.Load.OVER);
+        assertThat(ChartChecker.load(2, 4, 1)).isEqualTo(ChartChecker.Load.UNDER);
+        // A half-weight senior's share is 2: 4 is over for them.
+        assertThat(ChartChecker.load(4, 4, 0.5)).isEqualTo(ChartChecker.Load.OVER);
+        // A fractional average rounds in the person's favour: share 2.5, so 1 to 4 are balanced.
+        assertThat(ChartChecker.load(4, 2.5, 1)).isEqualTo(ChartChecker.Load.BALANCED);
+        assertThat(ChartChecker.load(1, 2.5, 1)).isEqualTo(ChartChecker.Load.BALANCED);
+        assertThat(ChartChecker.load(0, 2.5, 1)).isEqualTo(ChartChecker.Load.UNDER);
+    }
 }

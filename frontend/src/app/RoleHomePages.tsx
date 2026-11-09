@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router'
 import { useCollege } from '@/features/college/api'
+import { HodDashboard } from '@/features/hod/HodDashboard'
 import { FacultyDashboard } from '@/features/myduties/FacultyDashboard'
 import { useSession } from '@/features/auth/useAuth'
 import { usePolicy } from '@/features/policy/api'
@@ -97,7 +98,11 @@ function PolicySummary() {
 }
 
 export function HodHomePage() {
-  return <AreaHome title="Department" />
+  return (
+    <AreaHome title="Department">
+      <HodDashboard />
+    </AreaHome>
+  )
 }
 
 export function FacultyHomePage() {

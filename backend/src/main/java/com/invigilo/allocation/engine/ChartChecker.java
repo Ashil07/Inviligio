@@ -149,6 +149,21 @@ public final class ChartChecker {
         }
     }
 
+    /** How a person's duties compare with an even share of the period's duties. */
+    public enum Load { UNDER, BALANCED, OVER }
+
+    /**
+     * The workload rule shared by the editor's warning and the HOD dashboard: an even share is
+     * {@code average × dutyWeight}; more than one duty above it (rounded up) is {@code OVER}, more
+     * than one below it (rounded down) is {@code UNDER}.
+     */
+    public static Load load(int duties, double average, double dutyWeight) {
+        double share = average * dutyWeight;
+        if (duties > Math.ceil(share) + 1) return Load.OVER;
+        if (duties < Math.floor(share) - 1) return Load.UNDER;
+        return Load.BALANCED;
+    }
+
     /**
      * Warns when the change would leave this person well above an even share: more than one duty
      * over the (weight-adjusted) average once the duty is added.
@@ -160,8 +175,7 @@ public final class ChartChecker {
         double total = 1;
         for (Candidate other : all) total += run.dutyCount(other.id());
         double mean = total / all.size();
-        double fairShare = Math.ceil(mean * c.dutyWeight());
-        if (after <= fairShare + 1) return Optional.empty();
+        if (load(after, mean, c.dutyWeight()) != Load.OVER) return Optional.empty();
         return Optional.of("would have " + after + " duties in this period; the average is "
                 + Math.round(mean * 10) / 10.0);
     }

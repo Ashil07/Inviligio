@@ -289,6 +289,17 @@ public class FacultyService {
         return new ExistingKeys(byCode, byEmail);
     }
 
+    /** Every faculty record of a department (active or not), by name. */
+    @Transactional(readOnly = true)
+    public List<Faculty> inDepartment(UUID departmentId) {
+        return repository.findByDepartmentIdOrderByFullName(departmentId);
+    }
+
+    @Transactional(readOnly = true)
+    public long activeCount() {
+        return repository.countByActiveTrue();
+    }
+
     /** Tenant-filtered: another college's faculty is not found. */
     @Transactional(readOnly = true)
     public Faculty find(UUID id) {

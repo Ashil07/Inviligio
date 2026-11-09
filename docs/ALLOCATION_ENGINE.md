@@ -139,7 +139,8 @@ The same `HardConstraint`/`SoftConstraint` classes drive:
 existing chart into the engine's own `Run` (package-private) and calls the same `reasons(...)` and
 `cost(...)` methods generation uses, so the rules cannot drift. It offers `check` (hard reasons +
 soft-cost notes + a workload warning when the person would end up more than one duty above the
-weight-adjusted average), `alternatives` (legal candidates by cost; no look-ahead term),
+weight-adjusted average; the rule is the public `ChartChecker.load`, which the HOD dashboard also
+uses for over/under), `alternatives` (legal candidates by cost; no look-ahead term),
 `violations` (every loaded duty against the rest; the generator's final validation uses the same
 method) and `explainOpen` (the unfilled-position funnel for a vacant seat). Edits are judged with
 the policy version the chart was generated with. Swaps (M13) and substitutes (M14) should use

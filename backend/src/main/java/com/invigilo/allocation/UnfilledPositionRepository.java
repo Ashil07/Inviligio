@@ -13,5 +13,8 @@ interface UnfilledPositionRepository extends JpaRepository<UnfilledPosition, UUI
     @Query("select u from UnfilledPosition u join fetch u.sessionHall sh join fetch sh.hall join fetch sh.session where u.chartId = :chartId")
     List<UnfilledPosition> findForChart(UUID chartId);
 
+    @Query("select coalesce(sum(u.missing), 0) from UnfilledPosition u where u.chartId = :chartId")
+    int missingIn(UUID chartId);
+
     Optional<UnfilledPosition> findByChartIdAndSessionHall_IdAndRole(UUID chartId, UUID sessionHallId, AllocationResult.Role role);
 }

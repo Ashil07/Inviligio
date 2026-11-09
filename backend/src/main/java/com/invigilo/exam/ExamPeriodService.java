@@ -179,6 +179,12 @@ public class ExamPeriodService {
         findPeriod(periodId).startAllocating();
     }
 
+    /** Called when a duty chart is published; freezes the timetable. */
+    @Transactional
+    public void markPublished(UUID periodId) {
+        findPeriod(periodId).publish();
+    }
+
     // ---- lookups and rules ----
 
     @Transactional(readOnly = true)

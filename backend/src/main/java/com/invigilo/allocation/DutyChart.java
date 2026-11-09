@@ -59,6 +59,27 @@ public class DutyChart extends TenantScopedEntity {
         this.createdBy = createdBy;
     }
 
+    /** A new draft that starts as a copy of {@code published} (same policy, run and input fingerprint). */
+    static DutyChart draftFrom(DutyChart published, int chartVersion, UUID createdBy) {
+        return new DutyChart(published.periodId, chartVersion, published.policyId, published.allocationRunId,
+                published.inputHash, createdBy);
+    }
+
+    /** DRAFT → PUBLISHED. From here on the chart never changes. */
+    void publish(UUID userId, Instant at) {
+        if (status != Status.DRAFT) throw new IllegalStateException("Only a draft can be published");
+        this.status = Status.PUBLISHED;
+        this.publishedBy = userId;
+        this.publishedAt = at;
+    }
+
+    /** PUBLISHED → SUPERSEDED, when a newer version is published. Kept as history. */
+    void supersede() {
+        if (status != Status.PUBLISHED) throw new IllegalStateException("Only the published chart can be superseded");
+        this.status = Status.SUPERSEDED;
+    }
+
+    public UUID getPublishedBy() { return publishedBy; }
     public UUID getPeriodId() { return periodId; }
     public int getChartVersion() { return chartVersion; }
     public Status getStatus() { return status; }

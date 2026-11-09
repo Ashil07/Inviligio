@@ -241,11 +241,11 @@ public class ChartEditService {
 
     private Editing load(UUID periodId, boolean lock) {
         ExamPeriod period = periods.findPeriod(periodId);
-        if (!period.isEditable()) {
+        if (!period.allowsChartChanges()) {
             throw ApiException.conflict("PERIOD_LOCKED", "This examination period is " + period.getStatus()
                     + "; its duty chart can no longer be edited");
         }
-        DutyChart chart = (lock ? charts.lockDraft(periodId) : charts.findByPeriodIdAndStatus(periodId, DutyChart.Status.DRAFT))
+        DutyChart chart = (lock ? charts.lockDraftForEdit(periodId) : charts.findByPeriodIdAndStatus(periodId, DutyChart.Status.DRAFT))
                 .orElseThrow(() -> ApiException.conflict("NO_DRAFT", "Only a draft duty chart can be edited. Generate one first."));
         List<DutyAssignment> duties = assignments.findForChart(chart.getId());
         Built built = allocation.buildForChart(period, chart);
@@ -344,6 +344,11 @@ public class ChartEditService {
             case "DUTY_REMOVED" -> "Removed " + who.apply(before) + " " + where.apply(before).replaceFirst("^as (.+?) in ", "from ")
                     + " (" + ("CHIEF".equals(before.path("role").asText()) ? "chief invigilator" : "invigilator")
                     + "); the position is open";
+            case "DUTY_CHART_PUBLISHED" -> "Published version " + after.path("chartVersion").asInt()
+                    + (after.hasNonNull("supersededVersion") ? ", replacing version " + after.path("supersededVersion").asInt() : "")
+                    + ": " + after.path("filled").asInt() + " of " + after.path("positions").asInt() + " positions filled";
+            case "DUTY_CHART_DRAFTED" -> "Started draft version " + after.path("chartVersion").asInt() + " from published version "
+                    + after.path("fromVersion").asInt();
             case "DUTY_CHART_GENERATED" -> "Generated draft version " + after.path("chartVersion").asInt() + ": "
                     + after.path("stats").path("filled").asInt() + " of " + after.path("stats").path("positions").asInt()
                     + " positions filled";

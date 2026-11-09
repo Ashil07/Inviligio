@@ -325,6 +325,17 @@ stays true); manual duties get `source = MANUAL` and no explanation. The chart v
 `issues` (duties that break a hard rule now, e.g. leave approved after generation, or inactive
 faculty) and live `stats`.
 
+Publishing *(M10, `allocation/ChartPublishService`, no migration)*: `POST /duty-chart/publish`
+`{version}` publishes the draft exactly as reviewed (the draft's `version` is bumped by every edit
+via `PESSIMISTIC_FORCE_INCREMENT`, so a stale review gets `STALE_UPDATE`); refused with
+`CHART_HAS_ERRORS` while `issues` is not empty; open positions are allowed (the UI warns). The
+previous PUBLISHED chart becomes SUPERSEDED and the period becomes PUBLISHED, which freezes the
+timetable (`ExamPeriod.isEditable()` is false) so cascades can never delete published duties.
+Charts stay changeable until the period is CLOSED (`allowsChartChanges()`): `POST /duty-chart/draft`
+copies the published chart into a new DRAFT (or generate one); publishing it supersedes the old
+one. `GET /duty-chart/versions[/{n}]` lists and shows every version. Audit actions
+`DUTY_CHART_PUBLISHED` and `DUTY_CHART_DRAFTED` (on `duty_chart`) appear in the history.
+
 Lifecycle: a DRAFT is freely editable (every edit validated). Publishing freezes it as a version.
 After publishing, assignments change only through controlled workflows (swap, substitute, admin
 reassignment) — each runs the same validator and writes `audit_log`. A larger rework goes through a

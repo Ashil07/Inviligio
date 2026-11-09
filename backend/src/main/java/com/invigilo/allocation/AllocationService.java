@@ -25,6 +25,8 @@ import com.invigilo.exam.Staffing;
 import com.invigilo.faculty.Faculty;
 import com.invigilo.faculty.FacultyRestriction;
 import com.invigilo.faculty.FacultyService;
+import com.invigilo.identity.AppUser;
+import com.invigilo.identity.AppUserRepository;
 import com.invigilo.policy.CollegePolicy;
 import com.invigilo.policy.PolicyService;
 import com.invigilo.policy.PolicySettings;
@@ -83,10 +85,19 @@ public class AllocationService {
     public record IssueView(UUID assignmentId, LocalDate date, String sessionLabel, String hallCode, String facultyName,
                             List<String> reasons) {}
 
+    /**
+     * One chart version. {@code version} is the optimistic-lock version (changes with every edit);
+     * {@code publishedVersion} is the period's currently published chart version, if any.
+     */
     public record ChartView(UUID id, UUID periodId, String periodName, int chartVersion, DutyChart.Status status,
                             Instant generatedAt, Integer policyVersion, boolean policyChanged, boolean inputsChanged,
                             AllocationResult.Stats stats, List<SessionView> sessions, List<UnfilledView> unfilled,
-                            List<WorkloadRow> workload, List<IssueView> issues) {}
+                            List<WorkloadRow> workload, List<IssueView> issues, long version, Instant publishedAt,
+                            String publishedBy, Integer publishedVersion) {}
+
+    /** A line in the period's list of chart versions. */
+    public record VersionSummary(int chartVersion, DutyChart.Status status, Instant createdAt, Instant publishedAt,
+                                 String publishedBy, int positions, int filled) {}
 
     /** The problem plus what is needed to store and explain its result. */
     record Built(AllocationProblem problem, CollegePolicy policy, Map<UUID, SessionHall> sessionHalls,
@@ -102,13 +113,14 @@ public class AllocationService {
     private final DutyAssignmentRepository assignments;
     private final UnfilledPositionRepository unfilled;
     private final AuditService audit;
+    private final AppUserRepository users;
     private final Clock clock;
     private final AllocationEngine engine = new AllocationEngine();
 
     public AllocationService(ExamPeriodService periods, ScheduleService schedule, FacultyService facultyService,
                              AvailabilityService availability, PolicyService policies, AllocationRunRepository runs,
                              DutyChartRepository charts, DutyAssignmentRepository assignments,
-                             UnfilledPositionRepository unfilled, AuditService audit, Clock clock) {
+                             UnfilledPositionRepository unfilled, AuditService audit, AppUserRepository users, Clock clock) {
         this.periods = periods;
         this.schedule = schedule;
         this.facultyService = facultyService;
@@ -119,6 +131,7 @@ public class AllocationService {
         this.assignments = assignments;
         this.unfilled = unfilled;
         this.audit = audit;
+        this.users = users;
         this.clock = clock;
     }
 
@@ -127,7 +140,7 @@ public class AllocationService {
     @Transactional
     public ChartView generate(UUID periodId, CurrentUser user) {
         ExamPeriod period = periods.findPeriod(periodId);
-        if (!period.isEditable()) {
+        if (!period.allowsChartChanges()) {
             throw ApiException.conflict("PERIOD_LOCKED", "This examination period is " + period.getStatus() + "; it can no longer be allocated");
         }
         Built built = build(period);
@@ -184,6 +197,37 @@ public class AllocationService {
                 .or(() -> charts.findByPeriodIdOrderByChartVersionDesc(periodId).stream().findFirst())
                 .orElseThrow(() -> ApiException.notFound("NO_CHART", "No duty chart has been generated for this period yet"));
         return view(chart, period);
+    }
+
+    /** Every version of the period's chart, newest first. */
+    @Transactional(readOnly = true)
+    public List<VersionSummary> versions(UUID periodId) {
+        periods.findPeriod(periodId);
+        List<DutyChart> all = charts.findByPeriodIdOrderByChartVersionDesc(periodId);
+        Map<UUID, String> names = userNames(all.stream().map(DutyChart::getPublishedBy).toList());
+        return all.stream()
+                .map(c -> {
+                    int filled = (int) assignments.countByChartId(c.getId());
+                    String publishedBy = c.getPublishedBy() == null ? null : names.get(c.getPublishedBy());
+                    return new VersionSummary(c.getChartVersion(), c.getStatus(), c.getCreatedAt(), c.getPublishedAt(),
+                            publishedBy, filled + unfilled.missingIn(c.getId()), filled);
+                })
+                .toList();
+    }
+
+    /** One version, read-only. */
+    @Transactional(readOnly = true)
+    public ChartView version(UUID periodId, int chartVersion) {
+        ExamPeriod period = periods.findPeriod(periodId);
+        DutyChart chart = charts.findByPeriodIdAndChartVersion(periodId, chartVersion)
+                .orElseThrow(() -> ApiException.notFound("CHART_VERSION_NOT_FOUND", "There is no version " + chartVersion + " of this chart"));
+        return view(chart, period);
+    }
+
+    private Map<UUID, String> userNames(List<UUID> ids) {
+        Set<UUID> wanted = ids.stream().filter(Objects::nonNull).collect(Collectors.toSet());
+        if (wanted.isEmpty()) return Map.of();
+        return users.findAllById(wanted).stream().collect(Collectors.toMap(AppUser::getId, AppUser::getFullName));
     }
 
     ChartView view(DutyChart chart, ExamPeriod period) {
@@ -249,9 +293,13 @@ public class AllocationService {
                 .orElse(null);
         boolean inputsChanged = chart.getStatus() == DutyChart.Status.DRAFT
                 && !ProblemFingerprint.of(build(period).problem()).equals(chart.getInputHash());
+        Integer publishedVersion = charts.findByPeriodIdAndStatus(period.getId(), DutyChart.Status.PUBLISHED)
+                .map(DutyChart::getChartVersion).orElse(null);
+        String publishedBy = chart.getPublishedBy() == null ? null : userNames(List.of(chart.getPublishedBy())).get(chart.getPublishedBy());
         return new ChartView(chart.getId(), period.getId(), period.getName(), chart.getChartVersion(), chart.getStatus(),
                 chart.getCreatedAt(), policyVersion, !Objects.equals(latestPolicyId, chart.getPolicyId()), inputsChanged,
-                stats, sessionViews, gapViews, workload, issues);
+                stats, sessionViews, gapViews, workload, issues, chart.getVersion(), chart.getPublishedAt(), publishedBy,
+                publishedVersion);
     }
 
     private static DutyView dutyView(DutyAssignment d) {
@@ -279,7 +327,7 @@ public class AllocationService {
     }
 
     /** Duties that break a hard rule against the rest of the chart, or belong to inactive faculty. */
-    private static List<IssueView> issues(List<DutyAssignment> duties, Built built) {
+    static List<IssueView> issues(List<DutyAssignment> duties, Built built) {
         ChartChecker checker = new ChartChecker(built.problem(), placements(duties));
         Map<String, DutyAssignment> byPlacement = new HashMap<>();
         duties.forEach(d -> byPlacement.put(key(placement(d)), d));

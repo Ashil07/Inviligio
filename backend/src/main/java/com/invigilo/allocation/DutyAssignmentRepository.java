@@ -26,4 +26,6 @@ interface DutyAssignmentRepository extends JpaRepository<DutyAssignment, UUID> {
     List<Object[]> historicalDuties(UUID periodId);
 
     long countByFacultyId(UUID facultyId);
+
+    long countByChartId(UUID chartId);
 }

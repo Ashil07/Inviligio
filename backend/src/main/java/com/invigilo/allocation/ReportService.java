@@ -12,6 +12,7 @@ import com.invigilo.report.Report;
 import com.invigilo.report.Report.Column;
 import com.invigilo.report.Report.Section;
 import com.invigilo.report.ReportFormat;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
@@ -64,16 +65,19 @@ public class ReportService {
     private final UnfilledPositionRepository unfilled;
     private final ExamPeriodService periods;
     private final FairnessService fairness;
+    private final RemunerationService remuneration;
     private final CollegeService colleges;
     private final CollegeTime collegeTime;
 
     ReportService(DutyChartRepository charts, DutyAssignmentRepository assignments, UnfilledPositionRepository unfilled,
-                  ExamPeriodService periods, FairnessService fairness, CollegeService colleges, CollegeTime collegeTime) {
+                  ExamPeriodService periods, FairnessService fairness, RemunerationService remuneration, CollegeService colleges,
+                  CollegeTime collegeTime) {
         this.charts = charts;
         this.assignments = assignments;
         this.unfilled = unfilled;
         this.periods = periods;
         this.fairness = fairness;
+        this.remuneration = remuneration;
         this.colleges = colleges;
         this.collegeTime = collegeTime;
     }
@@ -239,6 +243,48 @@ public class ReportService {
                                     .collect(Collectors.joining(", ")))).toList()));
         }
         return file(new Report("Fairness of duty allocation", details, null, sections), "fairness-" + slug(f.periodName()), format);
+    }
+
+    /** Pay per faculty member and department from completed duties, with the rates used. */
+    @Transactional(readOnly = true)
+    public ReportFile remuneration(UUID periodId, String department, ReportFormat format) {
+        RemunerationService.Pay pay = remuneration.pay(periodId);
+        var s = pay.summary();
+        List<String> details = new ArrayList<>(header(periods.findPeriod(periodId)));
+        details.add("Published duty chart version " + pay.chartVersion() + "; a duty is paid once its session has ended unless the person was"
+                + " marked absent. Amounts in " + s.currency() + ".");
+        if (department != null) details.add("Filters: department " + department);
+        if (s.withoutRate() > 0) details.add(s.withoutRate() + " completed dut" + (s.withoutRate() == 1 ? "y has" : "ies have")
+                + " no rate for its date and " + (s.withoutRate() == 1 ? "is" : "are") + " not included in the amounts");
+        List<RemunerationService.FacultyPay> people = pay.faculty().stream()
+                .filter(r -> department == null || department.equalsIgnoreCase(r.departmentCode())).toList();
+        List<Section> sections = new ArrayList<>();
+        sections.add(new Section("Faculty", List.of(Column.text("Faculty"), Column.text("Code"), Column.text("Department"),
+                Column.number("Completed"), Column.number("As chief"), Column.number("Absent"), Column.number("Upcoming"),
+                Column.number("Without rate"), Column.number("Amount (" + s.currency() + ")")),
+                people.stream().map(r -> List.of(r.name(), r.code(), r.departmentCode(), String.valueOf(r.completed()),
+                        String.valueOf(r.chiefCompleted()), String.valueOf(r.absent()), String.valueOf(r.upcoming()),
+                        String.valueOf(r.withoutRate()), r.amount().toPlainString())).toList()));
+        if (department == null) {
+            sections.add(new Section("Departments", List.of(Column.text("Department"), Column.text("Name"), Column.number("Faculty"),
+                    Column.number("Completed"), Column.number("Amount (" + s.currency() + ")")),
+                    pay.departments().stream().map(d -> List.of(d.code(), d.name(), String.valueOf(d.faculty()), String.valueOf(d.completed()),
+                            d.amount().toPlainString())).toList()));
+            sections.add(new Section("Total", List.of(Column.text("Measure"), Column.number("Value")), List.of(
+                    List.of("Completed duties", String.valueOf(s.completed())),
+                    List.of("Absent", String.valueOf(s.absent())),
+                    List.of("Upcoming (not yet paid)", String.valueOf(s.upcoming())),
+                    List.of("Total amount (" + s.currency() + ")", s.total().toPlainString()))));
+        } else {
+            BigDecimal total = people.stream().map(RemunerationService.FacultyPay::amount).reduce(BigDecimal.ZERO.setScale(2), BigDecimal::add);
+            sections.add(new Section("Total", List.of(Column.text("Measure"), Column.number("Value")), List.of(
+                    List.of("Completed duties", String.valueOf(people.stream().mapToInt(RemunerationService.FacultyPay::completed).sum())),
+                    List.of("Total amount (" + s.currency() + ")", total.toPlainString()))));
+        }
+        sections.add(new Section("Rates", List.of(Column.text("Role"), Column.text("From"), Column.number("Amount (" + s.currency() + ")")),
+                remuneration.rates().stream().map(r -> List.of(r.role() == Role.CHIEF ? "Chief invigilator" : "Invigilator",
+                        DAY.format(r.effectiveFrom()), r.amount().toPlainString())).toList()));
+        return file(new Report("Invigilation remuneration", details, null, sections), "remuneration-" + slug(pay.periodName()), format);
     }
 
     // ---- shared ----

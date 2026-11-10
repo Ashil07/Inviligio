@@ -412,7 +412,18 @@ new DRAFT version that supersedes the published one on publish.
   `DUTY_SUBSTITUTED` on `duty_chart` with the reason; open swaps of that duty become INVALIDATED.
   `changesNotInDraft` counts `DUTY_SWAPPED`, `DUTY_HANDED_OVER` and `DUTY_SUBSTITUTED` audit entries
   on the published chart since the draft was created.
-- `remuneration_rate` — role, exam_type/session type, amount, currency, effective_from/to.
+- `remuneration_rate` *(M17, migration V10, `allocation/RemunerationService`)* — role (CHIEF,
+  INVIGILATOR), amount (numeric 10,2), currency (one per college, default INR), effective_from; unique
+  per role and date. A rate applies until the next rate of the same role starts (no `effective_to`
+  stored; no exam-type rates yet). Pay is computed, never stored, from the PUBLISHED chart: a duty is
+  paid once its session has ended (college time) unless it is ABSENT; CANCELLED never counts (Q3).
+  Completed duties without a rate on their date are counted as `withoutRate` and not priced.
+  Attendance: `PUT /exam-periods/{id}/duty-chart/assignments/{assignmentId}/attendance {absent,
+  version, reason}` marks a published duty ABSENT or back to ASSIGNED, only after its session has
+  ended (so it never meets swaps or substitutes); audited `DUTY_MARKED_ABSENT`/`DUTY_MARKED_PRESENT`
+  on `duty_chart` (also counted in `changesNotInDraft`). Rates: `GET/POST /remuneration/rates`,
+  `DELETE /remuneration/rates/{id}?version=` (audited on `remuneration_rate`); pay:
+  `GET /remuneration[?periodId=]`; report `.../reports/remuneration`. Exam cell only.
 
 **Audit**
 - `audit_log` — append-only: college_id, actor_user_id, action, entity_type, entity_id,

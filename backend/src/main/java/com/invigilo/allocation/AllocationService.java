@@ -64,12 +64,14 @@ import org.springframework.transaction.annotation.Transactional;
 public class AllocationService {
 
     /** Audit actions that change a published chart in place. */
-    static final List<String> PUBLISHED_CHART_CHANGES = List.of("DUTY_SWAPPED", "DUTY_HANDED_OVER", "DUTY_SUBSTITUTED");
+    static final List<String> PUBLISHED_CHART_CHANGES = List.of("DUTY_SWAPPED", "DUTY_HANDED_OVER", "DUTY_SUBSTITUTED",
+            "DUTY_MARKED_ABSENT", "DUTY_MARKED_PRESENT");
 
     private static final Logger log = LoggerFactory.getLogger(AllocationService.class);
 
     public record DutyView(UUID assignmentId, UUID facultyId, String facultyCode, String facultyName, String departmentCode,
-                           Role role, DutyAssignment.Source source, Explanation explanation, long version) {}
+                           Role role, DutyAssignment.Source source, Explanation explanation, long version,
+                           DutyAssignment.Status status) {}
 
     public record HallView(UUID sessionHallId, String hallCode, String hallName, int required, int missing,
                            List<DutyView> duties) {}
@@ -318,7 +320,7 @@ public class AllocationService {
     private static DutyView dutyView(DutyAssignment d) {
         Faculty f = d.getFaculty();
         return new DutyView(d.getId(), f.getId(), f.getEmployeeCode(), f.getFullName(), f.getDepartment().getCode(), d.getRole(),
-                d.getSource(), d.getExplanation(), d.getVersion());
+                d.getSource(), d.getExplanation(), d.getVersion(), d.getStatus());
     }
 
     /** Statistics of the chart as it is now (over active faculty), so they stay right after manual edits. */

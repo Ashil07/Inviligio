@@ -12,6 +12,8 @@ import { formatDateTime } from '@/lib/forms'
 import {
   REASON_LABEL,
   explain,
+  sessionEnded,
+  useMarkAttendance,
   useChartHistory,
   useChartVersion,
   useChartVersions,
@@ -20,6 +22,7 @@ import {
   useNewDraft,
   usePublishChart,
   type ChartSession,
+  type Duty,
   type DutyChart,
   type Unfilled,
 } from './api'
@@ -120,6 +123,24 @@ function ChartReview({ chart, readOnly = false }: { chart: DutyChart; readOnly?:
   const substitutable = chart.status === 'PUBLISHED' && (policy.data?.settings.swaps.adminCanReassignDirectly ?? false)
   const [substituting, setSubstituting] = useState<SubstituteTarget | null>(null)
   const [notice, setNotice] = useState('')
+  const attendance = useMarkAttendance(chart.periodId)
+  const [attendanceProblem, setAttendanceProblem] = useState<string | null>(null)
+
+  /** After the session the exam cell can mark a no-show absent (not paid), or undo it. */
+  async function markAttendance(duty: Duty, absent: boolean) {
+    const question = absent
+      ? `Mark ${duty.facultyName} absent? The duty will not be paid.`
+      : `Mark ${duty.facultyName} present again? The duty will be paid.`
+    if (!window.confirm(question)) return
+    setAttendanceProblem(null)
+    setNotice('')
+    try {
+      await attendance.mutateAsync({ assignmentId: duty.assignmentId, absent, version: duty.version })
+      setNotice(absent ? `${duty.facultyName} is marked absent.` : `${duty.facultyName} is marked present.`)
+    } catch (e) {
+      setAttendanceProblem(toApiProblem(e).detail ?? 'Could not change the attendance.')
+    }
+  }
 
   /** Opens the replace panel for a duty listed as an issue. */
   function replaceIssue(assignmentId: string) {
@@ -224,6 +245,7 @@ function ChartReview({ chart, readOnly = false }: { chart: DutyChart; readOnly?:
       )}
       {editing && <ChartEditor key={JSON.stringify(editing)} chart={chart} target={editing} onDone={() => setEditing(null)} />}
       {notice && <SuccessNotice>{notice}</SuccessNotice>}
+      {attendanceProblem && <ErrorAlert>{attendanceProblem}</ErrorAlert>}
       {substituting && (
         <SubstitutePanel
           key={substituting.duty.assignmentId}
@@ -241,6 +263,7 @@ function ChartReview({ chart, readOnly = false }: { chart: DutyChart; readOnly?:
         unfilled={chart.unfilled}
         issueIds={new Set(chart.issues.map((i) => i.assignmentId))}
         onEdit={edit}
+        onAttendance={chart.status === 'PUBLISHED' ? (duty, absent) => void markAttendance(duty, absent) : undefined}
         onSubstitute={
           substitutable
             ? (target) => {
@@ -271,12 +294,14 @@ function ChartGrid({
   issueIds,
   onEdit,
   onSubstitute,
+  onAttendance,
 }: {
   sessions: ChartSession[]
   unfilled: Unfilled[]
   issueIds: Set<string>
   onEdit?: (target: EditTarget) => void
   onSubstitute?: (target: SubstituteTarget) => void
+  onAttendance?: (duty: Duty, absent: boolean) => void
 }) {
   const dates = [...new Set(sessions.map((s) => s.date))]
   const [date, setDate] = useState(dates[0] ?? '')
@@ -317,6 +342,7 @@ function ChartGrid({
                             {d.source === 'MANUAL' && <span className="ml-2 rounded bg-slate-100 px-1.5 text-xs font-medium text-slate-600">edited</span>}
                             {d.source === 'SWAP' && <span className="ml-2 rounded bg-slate-100 px-1.5 text-xs font-medium text-slate-600">swapped</span>}
                             {d.source === 'SUBSTITUTE' && <span className="ml-2 rounded bg-amber-50 px-1.5 text-xs font-medium text-amber-800">substitute</span>}
+                            {d.status === 'ABSENT' && <span className="ml-2 rounded bg-red-50 px-1.5 text-xs font-medium text-red-700">absent</span>}
                             {issueIds.has(d.assignmentId) && <span className="ml-2 text-xs font-medium">breaks a rule</span>}
                           </summary>
                           <p className="mt-1 text-xs text-slate-600">{explain(d)}</p>
@@ -341,7 +367,17 @@ function ChartGrid({
                             </button>
                           </span>
                         )}
-                        {onSubstitute && (
+                        {onAttendance && sessionEnded(s) && (
+                          <button
+                            type="button"
+                            className="shrink-0 text-xs font-medium text-slate-600 hover:underline"
+                            aria-label={`${d.status === 'ABSENT' ? 'Mark present' : 'Mark absent'}: ${d.facultyName} in ${h.hallCode}`}
+                            onClick={() => onAttendance(d, d.status !== 'ABSENT')}
+                          >
+                            {d.status === 'ABSENT' ? 'Mark present' : 'Mark absent'}
+                          </button>
+                        )}
+                        {onSubstitute && !sessionEnded(s) && (
                           <button
                             type="button"
                             className="shrink-0 text-xs font-medium text-indigo-700 hover:underline"

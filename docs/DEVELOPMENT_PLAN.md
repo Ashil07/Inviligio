@@ -86,7 +86,7 @@ admin page, then start M9.
 | M14 | Emergency substitutes | **Done.** Ranked candidates from `ChartChecker` with notes and the exclusion funnel; exam cell picks one with a reason; duty handed over under a chart lock; audited; open swaps of the duty invalidated. |
 | M15 | Fairness analytics | **Done.** From published duties: per-faculty totals and even share, mean/min/max/std-dev, department comparison, history across periods, unfilled. Recharts page `/admin/analytics`. |
 | M16 | Reports | **Done.** PDF (OpenPDF), Excel (POI, streaming), CSV: duty chart by date, session, hall, faculty or department with filters; workload; fairness. Remuneration reports come with M17. |
-| M17 | Remuneration | Rates with effective dates per college; computed from completed duties; department totals. |
+| M17 | Remuneration | **Done.** Rates per role with effective dates; pay from completed duties (session over, not absent); absent marking on the published chart; per-person and department totals; report in PDF/Excel/CSV. |
 | M18 | Final integration | **Connect Supabase** (session pooler, `backend/.env`), run migrations there, end-to-end walkthrough per role, security review, performance check on realistic data, deployment notes. |
 
 ## 5. Open product questions
@@ -98,7 +98,7 @@ change these; update ARCHITECTURE.md / ALLOCATION_ENGINE.md when answered.
 |---|---|---|
 | Q1 | Who may register a new college — anyone (self-service) or a platform operator? Is there a platform super-admin? | Self-service registration; registrant becomes EXAM_CELL_ADMIN; no super-admin in v1. |
 | Q2 | Is the "chief invigilator" per **hall**, or per session/centre (Chief Superintendent)? Does the chief count toward the hall's invigilator count? | Optional per hall; counts toward staffing. |
-| Q3 | QR attendance is excluded — so what makes a duty "completed" for remuneration? | Past-dated assignments count as completed unless the admin marks them ABSENT/CANCELLED. |
+| Q3 | QR attendance is excluded — so what makes a duty "completed" for remuneration? | Past-dated assignments count as completed unless the admin marks them ABSENT/CANCELLED. *(Implemented in M17: a duty counts once its session has ended; the exam cell marks no-shows absent on the published chart.)* |
 | Q4 | What does "senior faculty receive preference" mean: fewer duties, chief roles, or both? | Both offered as separate policy options (implemented in M2: `seniorsGetFewerDuties`, `preferSeniorsAsChief`). |
 | Q5 | Can one person belong to several colleges (e.g. visiting faculty)? | Supported in the data model; college picker at login. |
 | Q6 | Do HODs (and exam-cell staff) also receive invigilation duties? | Yes, if they have an active faculty record. |

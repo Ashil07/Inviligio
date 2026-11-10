@@ -350,6 +350,8 @@ public class ChartEditService {
                     + who.apply(after.path(1)) + " now " + where.apply(after.path(1));
             case "DUTY_SUBSTITUTED" -> "Substitute: " + who.apply(after) + " took over from " + who.apply(before) + " "
                     + where.apply(after);
+            case "DUTY_MARKED_ABSENT" -> "Marked " + who.apply(after) + " absent " + where.apply(after) + "; the duty is not paid";
+            case "DUTY_MARKED_PRESENT" -> "Marked " + who.apply(after) + " present again " + where.apply(after);
             case "DUTY_CHART_PUBLISHED" -> "Published version " + after.path("chartVersion").asInt()
                     + (after.hasNonNull("supersededVersion") ? ", replacing version " + after.path("supersededVersion").asInt() : "")
                     + ": " + after.path("filled").asInt() + " of " + after.path("positions").asInt() + " positions filled";

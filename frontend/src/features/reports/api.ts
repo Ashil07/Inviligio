@@ -1,7 +1,7 @@
 import { useMutation } from '@tanstack/react-query'
 import { api } from '@/lib/api/client'
 
-export type ReportType = 'duty-chart' | 'workload' | 'fairness'
+export type ReportType = 'duty-chart' | 'workload' | 'fairness' | 'remuneration'
 export type ReportFormat = 'pdf' | 'xlsx' | 'csv'
 export type GroupBy = 'date' | 'session' | 'hall' | 'faculty' | 'department'
 

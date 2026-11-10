@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Download, FileSpreadsheet, FileText, Scale } from 'lucide-react'
+import { Download, FileSpreadsheet, FileText, IndianRupee, Scale } from 'lucide-react'
 import { useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { z } from 'zod'
@@ -17,6 +17,7 @@ const TYPES: { value: ReportType; label: string; description: string; icon: type
   { value: 'duty-chart', label: 'Duty chart', description: 'Who invigilates where and when, with open positions.', icon: FileText },
   { value: 'workload', label: 'Workload', description: "Each faculty member's duties against an even share.", icon: FileSpreadsheet },
   { value: 'fairness', label: 'Fairness', description: 'Averages, spread, departments and the trend across periods.', icon: Scale },
+  { value: 'remuneration', label: 'Remuneration', description: 'Pay per person and department from duties done.', icon: IndianRupee },
 ]
 
 const GROUPS: { value: GroupBy; label: string }[] = [
@@ -35,7 +36,7 @@ const FORMATS: { value: ReportFormat; label: string }[] = [
 
 const schema = z
   .object({
-    type: z.enum(['duty-chart', 'workload', 'fairness']),
+    type: z.enum(['duty-chart', 'workload', 'fairness', 'remuneration']),
     periodId: z.string().min(1, 'Choose an exam period'),
     format: z.enum(['pdf', 'xlsx', 'csv']),
     groupBy: z.enum(['date', 'session', 'hall', 'faculty', 'department']),
@@ -90,7 +91,7 @@ export function ReportsPage() {
       <form className="space-y-6" onSubmit={form.handleSubmit(onSubmit)} noValidate>
         <fieldset>
           <legend className="text-sm font-medium text-slate-700">Report</legend>
-          <div className="mt-2 grid gap-3 sm:grid-cols-3">
+          <div className="mt-2 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {TYPES.map((t) => (
               <label
                 key={t.value}

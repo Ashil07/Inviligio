@@ -6,6 +6,7 @@ import { Section } from '@/components/ui/fields'
 import { Table } from '@/components/ui/layout'
 import { FullPageSpinner } from '@/components/ui/Spinner'
 import { useMyAvailability } from '@/features/availability/api'
+import { useMySwaps } from '@/features/swaps/api'
 import { formatDate, hhmm } from '@/features/schedule/api'
 import { toApiProblem } from '@/lib/api/client'
 import { useDownloadCalendar, useMyDuties, type MyDuty } from './api'
@@ -76,11 +77,12 @@ export function FacultyDashboard() {
       <MonthCalendar duties={[...upcoming, ...past]} today={today} start={next?.date ?? today} />
 
       <Section title="Upcoming duties">
-        <DutyTable duties={upcoming} empty="Nothing coming up." />
+        <DutyTable duties={upcoming} empty="Nothing coming up." swappable />
       </Section>
       <Section title="Past duties">
         <DutyTable duties={past} empty="No past duties yet." />
       </Section>
+      <SwapRequests />
       <LeaveRequests />
     </div>
   )
@@ -95,9 +97,9 @@ function Stat({ label, value }: { label: string; value: number }) {
   )
 }
 
-function DutyTable({ duties, empty }: { duties: MyDuty[]; empty: string }) {
+function DutyTable({ duties, empty, swappable = false }: { duties: MyDuty[]; empty: string; swappable?: boolean }) {
   return (
-    <Table head={['Date', 'Session', 'Hall', 'Role', 'With']} empty={duties.length === 0 && empty}>
+    <Table head={['Date', 'Session', 'Hall', 'Role', 'With', ...(swappable ? [''] : [])]} empty={duties.length === 0 && empty}>
       {duties.map((d) => (
         <tr key={d.assignmentId}>
           <td className="px-4 py-2 text-slate-800">{formatDate(d.date)}</td>
@@ -107,6 +109,15 @@ function DutyTable({ duties, empty }: { duties: MyDuty[]; empty: string }) {
           <td className="px-4 py-2 text-slate-800">{place(d)}</td>
           <td className="px-4 py-2 text-slate-600">{roleName(d)}</td>
           <td className="px-4 py-2 text-slate-600">{d.colleagues.join(', ') || '-'}</td>
+          {swappable && (
+            <td className="px-4 py-2 text-right">
+              {d.status === 'ASSIGNED' && (
+                <Link to={`/faculty/swaps?duty=${d.assignmentId}`} className="text-sm font-medium text-indigo-700 hover:underline" aria-label={`Swap the duty on ${formatDate(d.date)} ${d.sessionLabel}`}>
+                  Swap
+                </Link>
+              )}
+            </td>
+          )}
         </tr>
       ))}
     </Table>
@@ -196,5 +207,19 @@ function LeaveRequests() {
         </Link>
       </p>
     </Section>
+  )
+}
+
+function SwapRequests() {
+  const swaps = useMySwaps()
+  const waiting = swaps.data?.received.filter((s) => s.status === 'PENDING_RECIPIENT').length ?? 0
+  if (!swaps.data || waiting === 0) return null
+  return (
+    <p className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+      {waiting === 1 ? 'A colleague has' : `${waiting} colleagues have`} asked you to swap a duty.{' '}
+      <Link to="/faculty/swaps" className="font-medium text-indigo-700 hover:underline">
+        Answer swap requests
+      </Link>
+    </p>
   )
 }

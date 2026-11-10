@@ -78,6 +78,7 @@ function chart(overrides: Partial<DutyChart> = {}): DutyChart {
     publishedAt: null,
     publishedBy: null,
     publishedVersion: null,
+    swapsNotInDraft: 0,
     ...overrides,
   }
 }
@@ -177,6 +178,16 @@ describe('AllocationPage', () => {
       expect(window.confirm).toHaveBeenCalledWith(expect.stringMatching(/replaces published version 1[\s\S]*1 position is still open/))
       await waitFor(() => expect(post).toHaveBeenCalledWith('/exam-periods/p1/duty-chart/publish', { version: 7 }))
       expect(await screen.findByText(/this is what faculty see/)).toBeInTheDocument()
+    })
+
+    it('warns that publishing a draft undoes swaps made on the published version', async () => {
+      mockGets(chart({ publishedVersion: 1, chartVersion: 2, swapsNotInDraft: 2 }))
+      vi.spyOn(window, 'confirm').mockReturnValue(false)
+      renderRoutes(routes, { path: '/admin/exams/p1/allocation', auth: admin() })
+
+      expect(await screen.findByText(/2 swaps were made on published version 1 after this draft was started/)).toBeInTheDocument()
+      await userEvent.click(screen.getByRole('button', { name: 'Publish version 2' }))
+      expect(window.confirm).toHaveBeenCalledWith(expect.stringMatching(/2 swaps made since this draft was started will be undone/))
     })
 
     it('does not allow publishing while a duty breaks a strict rule', async () => {

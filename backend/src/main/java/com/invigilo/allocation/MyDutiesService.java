@@ -1,12 +1,8 @@
 package com.invigilo.allocation;
 
 import com.invigilo.allocation.engine.AllocationResult.Role;
-import com.invigilo.college.CollegeService;
-import com.invigilo.common.error.ApiException;
 import com.invigilo.exam.ExamSession;
 import com.invigilo.exam.SessionHall;
-import com.invigilo.identity.CollegeMembership;
-import com.invigilo.identity.CollegeMembershipRepository;
 import com.invigilo.tenant.CurrentUser;
 import java.time.Clock;
 import java.time.Instant;
@@ -45,23 +41,22 @@ public class MyDutiesService {
     private static final DateTimeFormatter ICS_UTC = DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss'Z'");
 
     private final DutyAssignmentRepository assignments;
-    private final CollegeMembershipRepository memberships;
-    private final CollegeService colleges;
+    private final OwnFaculty ownFaculty;
+    private final CollegeTime collegeTime;
     private final Clock clock;
 
-    public MyDutiesService(DutyAssignmentRepository assignments, CollegeMembershipRepository memberships, CollegeService colleges,
-                           Clock clock) {
+    MyDutiesService(DutyAssignmentRepository assignments, OwnFaculty ownFaculty, CollegeTime collegeTime, Clock clock) {
         this.assignments = assignments;
-        this.memberships = memberships;
-        this.colleges = colleges;
+        this.ownFaculty = ownFaculty;
+        this.collegeTime = collegeTime;
         this.clock = clock;
     }
 
     @Transactional(readOnly = true)
     public MyDuties mine(CurrentUser user) {
-        ZoneId zone = collegeZone();
-        LocalDateTime now = LocalDateTime.ofInstant(clock.instant(), zone);
-        List<MyDuty> all = load(requireOwnFacultyId(user));
+        ZoneId zone = collegeTime.zone();
+        LocalDateTime now = collegeTime.now();
+        List<MyDuty> all = load(ownFaculty.requireId(user));
         // A duty counts as upcoming until its session has ended.
         List<MyDuty> upcoming = all.stream().filter(d -> d.date().atTime(d.endTime()).isAfter(now))
                 .sorted(Comparator.comparing(MyDuty::date).thenComparing(MyDuty::startTime).thenComparing(MyDuty::hallCode))
@@ -76,7 +71,7 @@ public class MyDutiesService {
     /** All published duties as an iCalendar (RFC 5545) document, times in UTC. */
     @Transactional(readOnly = true)
     public String calendar(CurrentUser user) {
-        ZoneId zone = collegeZone();
+        ZoneId zone = collegeTime.zone();
         String stamp = ICS_UTC.format(Instant.now(clock).atOffset(ZoneOffset.UTC));
         StringBuilder ics = new StringBuilder();
         line(ics, "BEGIN:VCALENDAR");
@@ -85,7 +80,7 @@ public class MyDutiesService {
         line(ics, "CALSCALE:GREGORIAN");
         line(ics, "METHOD:PUBLISH");
         line(ics, "X-WR-CALNAME:Invigilation duties");
-        for (MyDuty d : load(requireOwnFacultyId(user))) {
+        for (MyDuty d : load(ownFaculty.requireId(user))) {
             String role = d.role() == Role.CHIEF ? "Chief invigilator" : "Invigilator";
             line(ics, "BEGIN:VEVENT");
             line(ics, "UID:" + d.assignmentId() + "@invigilo");
@@ -127,21 +122,6 @@ public class MyDutiesService {
         }
         out.sort(Comparator.comparing(MyDuty::date).thenComparing(MyDuty::startTime));
         return out;
-    }
-
-    private UUID requireOwnFacultyId(CurrentUser user) {
-        UUID id = memberships.findById(user.membershipId()).map(CollegeMembership::getFacultyId).orElse(null);
-        if (id == null) throw ApiException.forbidden("NOT_A_FACULTY_MEMBER", "Your login is not linked to a faculty record");
-        return id;
-    }
-
-    private ZoneId collegeZone() {
-        String tz = colleges.current().profile().timeZone();
-        try {
-            return tz == null ? ZoneId.of("Asia/Kolkata") : ZoneId.of(tz);
-        } catch (RuntimeException e) {
-            return ZoneId.of("Asia/Kolkata");
-        }
     }
 
     // ---- iCalendar helpers ----

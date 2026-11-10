@@ -104,6 +104,8 @@ export interface DutyChart {
   publishedBy: string | null
   /** The period's currently published version, if any. */
   publishedVersion: number | null
+  /** Draft only: swaps made on the published version after this draft was started (they are not in it). */
+  swapsNotInDraft: number
 }
 
 export interface VersionSummary {

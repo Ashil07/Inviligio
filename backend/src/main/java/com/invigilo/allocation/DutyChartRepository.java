@@ -35,6 +35,11 @@ interface DutyChartRepository extends JpaRepository<DutyChart, UUID> {
 
     List<DutyChart> findByStatus(DutyChart.Status status);
 
+    /** Serializes swaps on one chart, so two swaps cannot both pass the checks against the old chart. */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select c from DutyChart c where c.id = :id")
+    Optional<DutyChart> lockById(UUID id);
+
     @Query("select coalesce(max(c.chartVersion), 0) from DutyChart c where c.periodId = :periodId")
     int maxVersion(UUID periodId);
 }

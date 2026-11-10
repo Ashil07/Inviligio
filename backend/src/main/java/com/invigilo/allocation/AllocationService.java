@@ -44,6 +44,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -93,7 +94,7 @@ public class AllocationService {
                             Instant generatedAt, Integer policyVersion, boolean policyChanged, boolean inputsChanged,
                             AllocationResult.Stats stats, List<SessionView> sessions, List<UnfilledView> unfilled,
                             List<WorkloadRow> workload, List<IssueView> issues, long version, Instant publishedAt,
-                            String publishedBy, Integer publishedVersion) {}
+                            String publishedBy, Integer publishedVersion, int swapsNotInDraft) {}
 
     /** A line in the period's list of chart versions. */
     public record VersionSummary(int chartVersion, DutyChart.Status status, Instant createdAt, Instant publishedAt,
@@ -112,6 +113,7 @@ public class AllocationService {
     private final DutyChartRepository charts;
     private final DutyAssignmentRepository assignments;
     private final UnfilledPositionRepository unfilled;
+    private final SwapRequestRepository swaps;
     private final AuditService audit;
     private final AppUserRepository users;
     private final Clock clock;
@@ -120,7 +122,8 @@ public class AllocationService {
     public AllocationService(ExamPeriodService periods, ScheduleService schedule, FacultyService facultyService,
                              AvailabilityService availability, PolicyService policies, AllocationRunRepository runs,
                              DutyChartRepository charts, DutyAssignmentRepository assignments,
-                             UnfilledPositionRepository unfilled, AuditService audit, AppUserRepository users, Clock clock) {
+                             UnfilledPositionRepository unfilled, SwapRequestRepository swaps, AuditService audit,
+                             AppUserRepository users, Clock clock) {
         this.periods = periods;
         this.schedule = schedule;
         this.facultyService = facultyService;
@@ -130,6 +133,7 @@ public class AllocationService {
         this.charts = charts;
         this.assignments = assignments;
         this.unfilled = unfilled;
+        this.swaps = swaps;
         this.audit = audit;
         this.users = users;
         this.clock = clock;
@@ -293,13 +297,17 @@ public class AllocationService {
                 .orElse(null);
         boolean inputsChanged = chart.getStatus() == DutyChart.Status.DRAFT
                 && !ProblemFingerprint.of(build(period).problem()).equals(chart.getInputHash());
-        Integer publishedVersion = charts.findByPeriodIdAndStatus(period.getId(), DutyChart.Status.PUBLISHED)
-                .map(DutyChart::getChartVersion).orElse(null);
+        Optional<DutyChart> published = charts.findByPeriodIdAndStatus(period.getId(), DutyChart.Status.PUBLISHED);
+        Integer publishedVersion = published.map(DutyChart::getChartVersion).orElse(null);
+        // Swaps change the published chart only; a draft started earlier does not have them.
+        int swapsNotInDraft = chart.getStatus() != DutyChart.Status.DRAFT ? 0 : published
+                .map(p -> (int) swaps.countByChartIdAndStatusAndAppliedAtAfter(p.getId(), SwapRequest.Status.APPROVED, chart.getCreatedAt()))
+                .orElse(0);
         String publishedBy = chart.getPublishedBy() == null ? null : userNames(List.of(chart.getPublishedBy())).get(chart.getPublishedBy());
         return new ChartView(chart.getId(), period.getId(), period.getName(), chart.getChartVersion(), chart.getStatus(),
                 chart.getCreatedAt(), policyVersion, !Objects.equals(latestPolicyId, chart.getPolicyId()), inputsChanged,
                 stats, sessionViews, gapViews, workload, issues, chart.getVersion(), chart.getPublishedAt(), publishedBy,
-                publishedVersion);
+                publishedVersion, swapsNotInDraft);
     }
 
     private static DutyView dutyView(DutyAssignment d) {

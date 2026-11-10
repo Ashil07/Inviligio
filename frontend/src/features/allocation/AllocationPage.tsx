@@ -333,6 +333,7 @@ function Publish({ chart }: { chart: DutyChart }) {
     const lines = [`Publish version ${chart.chartVersion}? Faculty will see these duties and the chart can no longer be edited.`]
     if (chart.publishedVersion != null) lines.push(`It replaces published version ${chart.publishedVersion}.`)
     if (open > 0) lines.push(`${open} position${open === 1 ? ' is' : 's are'} still open.`)
+    if (chart.swapsNotInDraft > 0) lines.push(`${chart.swapsNotInDraft} swap${chart.swapsNotInDraft === 1 ? '' : 's'} made since this draft was started will be undone.`)
     if (!window.confirm(lines.join('\n\n'))) return
     setProblem(null)
     try {
@@ -354,6 +355,14 @@ function Publish({ chart }: { chart: DutyChart }) {
         <Check ok={open === 0} warn>
           {open === 0 ? 'Every position is filled.' : `${open} position${open === 1 ? ' is' : 's are'} still open. You can publish anyway.`}
         </Check>
+        {chart.swapsNotInDraft > 0 && (
+          <Check ok={false} warn>
+            {chart.swapsNotInDraft === 1 ? '1 swap was' : `${chart.swapsNotInDraft} swaps were`} made on published version{' '}
+            {chart.publishedVersion} after this draft was started. This draft does not have{' '}
+            {chart.swapsNotInDraft === 1 ? 'it' : 'them'}: publishing it undoes {chart.swapsNotInDraft === 1 ? 'that swap' : 'those swaps'}.
+            See Swaps for what changed.
+          </Check>
+        )}
         {(chart.inputsChanged || chart.policyChanged) && (
           <Check ok={false} warn>
             Inputs or the policy changed after generation; check the duties are still what you want.
@@ -383,7 +392,7 @@ function Check({ ok, warn, children }: { ok: boolean; warn: boolean; children: R
 function Versions({ periodId }: { periodId: string }) {
   const versions = useChartVersions(periodId)
   return (
-    <Section title="Versions" description="Every version of this chart. Published versions never change; a newer published version replaces the older one.">
+    <Section title="Versions" description="Every version of this chart. A published version changes only through approved swaps; a newer published version replaces the older one.">
       {versions.error && <ErrorAlert>{toApiProblem(versions.error).detail ?? 'Could not load the versions.'}</ErrorAlert>}
       {versions.data && (
         <Table head={['Version', 'Status', 'Filled', 'Created', 'Published', '']}>

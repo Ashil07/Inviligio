@@ -237,8 +237,9 @@ repository has no GitHub remote yet (see "Before you start").
 | Allocation | `GET /api/v1/exam-periods/{id}/duty-chart`, `POST .../duty-chart/generate` | admin |
 | My duties (M11) | `GET /api/v1/me/duties`, `GET /api/v1/me/duties.ics` | linked faculty |
 | Department (M12) | `GET /api/v1/department/overview[?periodId=]` | HOD |
+| Swaps (M13) | `GET /api/v1/me/swap-options`, `POST /me/swap-requests[/validate]`, `GET /me/swap-requests`, `POST /swap-requests/{id}/{accept,decline,cancel}`, `GET /swap-requests`, `POST /swap-requests/{id}/{approve,reject}` | faculty / HOD / admin |
 
-**Database migrations:** V1-V8 (latest `V8__allocation`). All tables in schema `invigilo`, every
+**Database migrations:** V1-V9 (latest `V9__duty_swaps`). All tables in schema `invigilo`, every
 tenant table has `college_id` and composite same-college foreign keys.
 
 **Policy settings implemented:** all of ALLOCATION_ENGINE.md §3 are stored, validated and editable,
@@ -440,3 +441,39 @@ Merged before this: pull requests #1 (leave-form fix) and #2 (M9); CI passed on 
 - Swap approvals are part of M13 (swaps do not exist yet); add them to this page then.
 - Over/under compares with the college-wide average of one published chart, not across periods;
   history across periods belongs to fairness analytics (M15).
+
+## M13 Duty swaps: done  (2026-11-10)
+
+**Built** (branch `feat/duty-swaps`, migration `V9__duty_swaps`)
+- Backend (`allocation/`): `SwapRequest` entity and repository, `SwapService`, `SwapController`.
+  Handover or exchange of duties in a PUBLISHED chart; colleague accepts (policy
+  `recipientMustAccept`), optional HOD approval (`hodApprovalRequired`, HOD of the requester's
+  department or the exam cell); applied under a chart lock after re-checking with `ChartChecker`,
+  otherwise INVALIDATED with the reason. Audited on `swap_request`, and on `duty_chart` so swaps show
+  in the chart history. `UsageCheck<Faculty>` for swap requests.
+- Shared helpers: `OwnFaculty` (own faculty record, HOD department) and `CollegeTime` (college-local
+  now); `MyDutiesService` and `DepartmentDashboardService` now use them.
+- `ChartView.swapsNotInDraft` + publish checklist warning: publishing a draft started before a swap
+  undoes that swap.
+- Frontend `features/swaps/`: `/faculty/swaps` (ask with live rule check, exchange-only colleagues,
+  answer, cancel, history), `/hod/swaps` and `/admin/swaps` (approve/reject, filter by status);
+  "Swap" links on the faculty dashboard, swap notices on the faculty and HOD dashboards; new menu
+  entries.
+- Test support: `ChartScenario.loginAtAnotherCollege`, `swapRules`, `publishCurrentDraft`.
+
+**Verified**
+- Backend: `SwapIntegrationTest` (6: handover with acceptance, invalidated by leave approved
+  meanwhile, exchange with HOD approval and department scope, who may act incl. another college,
+  stale version, swaps disabled, immediate apply, draft warning); full suite 172 green.
+- Frontend: 86 tests (7 new); lint, typecheck, build clean.
+- In the browser with demo data: Dr. Asha Menon offered Arun Nair a hall trade in the same session
+  (the clashing 27 Nov option was blocked with the reason), Arun saw the notice on his dashboard and
+  accepted, the duties moved, the exam cell list shows it, and the demo's draft v3 reports 1 swap not
+  in it. (The demo now has that swap applied; delete `backend/.dev-db` for a fresh demo.)
+
+**Known limits**
+- Swaps are not copied into a draft that already exists; the exam cell is warned before publishing.
+- No notifications beyond the in-app notices (product question Q8).
+- `adminCanReassignDirectly` is not used yet: the exam cell can change a published chart only by
+  starting a new draft. Substitutes (M14) are the natural place for direct reassignment.
+

@@ -109,6 +109,39 @@ abstract class ChartScenario extends IntegrationTest {
         return (String) accepted.getBody().get("accessToken");
     }
 
+    /** A faculty member of a brand-new other college (department MECH), signed in with these roles. */
+    String loginAtAnotherCollege(List<String> roles) {
+        TestData.Registered other = data().registerCollege();
+        String dept = id(data().send(POST, "/api/v1/departments", other.accessToken(),
+                Map.of("code", "MECH", "name", "Mechanical", "active", true), Map.class));
+        Map<String, Object> body = new HashMap<>(Map.of("employeeCode", "M1", "fullName", "Other Member", "departmentId", dept,
+                "employmentType", "REGULAR", "chiefEligible", true, "dutyWeight", 1, "active", true));
+        body.put("email", "m1." + TestData.unique().toLowerCase() + "@other.example.test");
+        String facultyId = id(data().send(POST, "/api/v1/faculty", other.accessToken(), body, Map.class));
+        String invitation = (String) data().send(POST, "/api/v1/faculty/" + facultyId + "/access/invitation", other.accessToken(),
+                Map.of("roles", roles), Map.class).getBody().get("token");
+        var accepted = http.postForEntity("/api/v1/auth/invitations/accept",
+                TestData.json(Map.of("token", invitation, "password", "faculty-password")), Map.class);
+        assertThat(accepted.getStatusCode()).as(String.valueOf(accepted.getBody())).isEqualTo(HttpStatus.OK);
+        return (String) accepted.getBody().get("accessToken");
+    }
+
+    /** Saves the current policy with different swap rules. */
+    void swapRules(boolean enabled, boolean recipientMustAccept, boolean hodApprovalRequired) {
+        Map<String, Object> current = send(GET, "/api/v1/policy", null).getBody();
+        Map<String, Object> settings = new HashMap<>((Map<String, Object>) current.get("settings"));
+        settings.put("swaps", Map.of("swapsEnabled", enabled, "recipientMustAccept", recipientMustAccept,
+                "hodApprovalRequired", hodApprovalRequired, "adminCanReassignDirectly", true));
+        var r = send(PUT, "/api/v1/policy", Map.of("basedOnVersion", current.get("version"), "settings", settings));
+        assertThat(r.getStatusCode()).as(String.valueOf(r.getBody())).isEqualTo(HttpStatus.OK);
+    }
+
+    void publishCurrentDraft() {
+        long version = ((Number) chart().get("version")).longValue();
+        var r = send(POST, base + "/publish", Map.of("version", version));
+        assertThat(r.getStatusCode()).as(String.valueOf(r.getBody())).isEqualTo(HttpStatus.OK);
+    }
+
     Map<String, Object> generate() {
         var r = send(POST, base + "/generate", null);
         assertThat(r.getStatusCode()).as(String.valueOf(r.getBody())).isEqualTo(HttpStatus.OK);

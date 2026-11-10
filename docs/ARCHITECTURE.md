@@ -359,8 +359,27 @@ reassignment) — each runs the same validator and writes `audit_log`. A larger 
 new DRAFT version that supersedes the published one on publish.
 
 **Workflows (Developer 2)**
-- `swap_request` — requester assignment, target faculty (+ their assignment for a two-way swap),
-  status machine (`PENDING_RECIPIENT` → `PENDING_HOD` → `APPROVED`/`REJECTED`/`CANCELLED`/`INVALIDATED`).
+- `swap_request` *(M13, migration V9, `allocation/SwapService`)* — chart, requester assignment and
+  faculty, target faculty, target assignment (null for a one-way handover), status
+  `PENDING_RECIPIENT` → `PENDING_HOD` → `APPROVED`, or `REJECTED`/`CANCELLED`/`INVALIDATED`; notes,
+  reviewer, `invalid_reason`, `applied_at`. At most one open request per offered duty (partial
+  unique index). Only duties of a PUBLISHED chart whose session has not started (college time) can
+  be offered. Flow per policy `swaps`: `swapsEnabled` (else `SWAPS_DISABLED`), `recipientMustAccept`
+  (the colleague accepts or declines), `hodApprovalRequired` (the HOD of the requester's department,
+  or the exam cell, approves; nobody decides a swap they are part of). Applying locks the chart
+  (`DutyChartRepository.lockById`, so swaps are checked one after another), re-checks that both duties
+  are still held, not started and the chart still published, then builds the chart as it would be
+  after the swap and runs `ChartChecker.violations()` on the moved duties only. A swap that no longer
+  fits becomes INVALIDATED with the reason (the call still succeeds, so the state is saved).
+  Applied duties get source `SWAP`. Audit: `SWAP_REQUESTED`, `SWAP_ACCEPTED`, `SWAP_DECLINED`,
+  `SWAP_CANCELLED`, `SWAP_APPROVED`, `SWAP_REJECTED`, `SWAP_APPLIED`, `SWAP_INVALIDATED` (on
+  `swap_request`) and `DUTY_SWAPPED` / `DUTY_HANDED_OVER` (on `duty_chart`, so they show in the chart
+  history). Endpoints: `GET /me/swap-options?assignmentId=` (handover-eligible colleagues first, then
+  exchange-only ones), `POST /me/swap-requests/validate`, `GET|POST /me/swap-requests`,
+  `POST /swap-requests/{id}/{accept,decline,cancel}` (faculty), `GET /swap-requests?status=`,
+  `POST /swap-requests/{id}/{approve,reject}` (HOD scoped to department, exam cell all); actions send
+  the swap's `version`. Swaps change the published chart only: a DRAFT started earlier reports
+  `swapsNotInDraft` and the publish checklist warns that publishing it undoes them.
 - `remuneration_rate` — role, exam_type/session type, amount, currency, effective_from/to.
 
 **Audit**
@@ -369,7 +388,7 @@ new DRAFT version that supersedes the published one on publish.
   Implemented (M2): `audit.AuditService.record(...)` is `Propagation.MANDATORY`, so it can only be
   called inside the changing transaction; pass DTOs/records as before/after, never entities.
   Current actions: `COLLEGE_PROFILE_UPDATED`, `COLLEGE_ONBOARDING_COMPLETED`, `POLICY_VERSION_CREATED`,
-  `DUTY_CHART_GENERATED` (on `exam_period`), and from M9 `DUTY_ASSIGNED`, `DUTY_REPLACED`, `DUTY_REMOVED`
+  `DUTY_CHART_GENERATED` (on `exam_period`), from M13 the `SWAP_*` actions (on `swap_request`), and from M9 `DUTY_ASSIGNED`, `DUTY_REPLACED`, `DUTY_REMOVED`
   (on `duty_chart`, with a `DutySnapshot` before/after); the latter are the chart's edit history.
 
 **College endpoints (M2):** `GET /api/v1/college` (any member), `PUT /api/v1/college` and

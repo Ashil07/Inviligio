@@ -19,6 +19,7 @@ export function AdminLayout() {
           { to: '/admin/import', label: 'Import', end: false },
           { to: '/admin/exams', label: 'Examinations', end: false },
           { to: '/admin/availability', label: 'Availability', end: false },
+          { to: '/admin/swaps', label: 'Swaps', end: false },
           { to: '/admin/settings/college', label: 'College', end: false },
           { to: '/admin/settings/policy', label: 'Policy', end: false },
         ]

@@ -237,6 +237,7 @@ repository has no GitHub remote yet (see "Before you start").
 | Allocation | `GET /api/v1/exam-periods/{id}/duty-chart`, `POST .../duty-chart/generate` | admin |
 | My duties (M11) | `GET /api/v1/me/duties`, `GET /api/v1/me/duties.ics` | linked faculty |
 | Department (M12) | `GET /api/v1/department/overview[?periodId=]` | HOD |
+| Analytics (M15) | `GET /api/v1/analytics/fairness[?periodId=]` | admin |
 | Substitutes (M14) | `GET/POST /api/v1/exam-periods/{id}/duty-chart/assignments/{assignmentId}/substitute` | admin |
 | Swaps (M13) | `GET /api/v1/me/swap-options`, `POST /me/swap-requests[/validate]`, `GET /me/swap-requests`, `POST /swap-requests/{id}/{accept,decline,cancel}`, `GET /swap-requests`, `POST /swap-requests/{id}/{approve,reject}` | faculty / HOD / admin |
 
@@ -508,4 +509,34 @@ Merged before this: pull requests #1 (leave-form fix) and #2 (M9); CI passed on 
 - The session-ended rule is not tested by moving time (shared forward-only test clock).
 - Open positions of a published chart cannot be filled from here; start a new version for that.
 - No ABSENT marking: the absent person simply loses the duty (relevant for remuneration, M17/Q3).
+
+## M15 Fairness analytics: done  (2026-11-10)
+
+**Built** (branch `feat/fairness-analytics`, no migration)
+- Backend: `FairnessService` + `FairnessController` (`/api/v1/analytics/fairness`, exam cell). Reads
+  every published chart once: summary, faculty rows (even share and over/under via
+  `ChartChecker.load`, all-periods totals), departments, history oldest first, open positions.
+- Frontend `features/analytics/`: `/admin/analytics` ("Fairness" in the exam-cell menu) with stat
+  tiles, a verdict line, a duties-per-person distribution chart with the average, a department chart
+  against the college average, a faculty table (department filter, "only over or under"), open
+  positions, and the trend across periods (average and spread) with a table. Recharts 3, first use in
+  the app; validated categorical slots 1-2 (blue, orange) from the dataviz reference palette, thin
+  bars, recessive grid, tables under every chart. The route is lazy-loaded so the charts library is
+  its own chunk.
+- `vite.config.ts`: `testTimeout` 15 s. Form tests typing with user-event take a few seconds each
+  and timed out under full parallel runs on an 18-core Windows machine; they pass alone.
+
+**Verified**
+- Backend: `FairnessIntegrationTest` (3: drafts ignored and one removed position shows as unfilled
+  with its reasons; two periods give a two-point history, latest by default, all-periods totals;
+  faculty and HOD 403, unknown period 404, another college sees nothing); full suite 178 green.
+- Frontend: 93 tests (5 new); lint, typecheck, build clean.
+- Against the running app with demo data (API): 81 of 82 filled, 1.62 duties per person, spread
+  0.49, five departments (MA lightest at 1.0), one open position with reasons; faculty get 403.
+  The page itself was not opened in the browser (the exam-cell sign-in was not available to the
+  assistant); it is at `/admin/analytics`.
+
+**Known limits**
+- Per-person figures use today's active faculty, also for older periods.
+- Exam cell only; HODs see their own department on their dashboard (M12).
 

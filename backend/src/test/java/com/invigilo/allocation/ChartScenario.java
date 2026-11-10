@@ -128,10 +128,14 @@ abstract class ChartScenario extends IntegrationTest {
 
     /** Saves the current policy with different swap rules. */
     void swapRules(boolean enabled, boolean recipientMustAccept, boolean hodApprovalRequired) {
+        swapRules(enabled, recipientMustAccept, hodApprovalRequired, true);
+    }
+
+    void swapRules(boolean enabled, boolean recipientMustAccept, boolean hodApprovalRequired, boolean adminCanReassignDirectly) {
         Map<String, Object> current = send(GET, "/api/v1/policy", null).getBody();
         Map<String, Object> settings = new HashMap<>((Map<String, Object>) current.get("settings"));
         settings.put("swaps", Map.of("swapsEnabled", enabled, "recipientMustAccept", recipientMustAccept,
-                "hodApprovalRequired", hodApprovalRequired, "adminCanReassignDirectly", true));
+                "hodApprovalRequired", hodApprovalRequired, "adminCanReassignDirectly", adminCanReassignDirectly));
         var r = send(PUT, "/api/v1/policy", Map.of("basedOnVersion", current.get("version"), "settings", settings));
         assertThat(r.getStatusCode()).as(String.valueOf(r.getBody())).isEqualTo(HttpStatus.OK);
     }

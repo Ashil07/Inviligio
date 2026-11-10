@@ -237,6 +237,7 @@ repository has no GitHub remote yet (see "Before you start").
 | Allocation | `GET /api/v1/exam-periods/{id}/duty-chart`, `POST .../duty-chart/generate` | admin |
 | My duties (M11) | `GET /api/v1/me/duties`, `GET /api/v1/me/duties.ics` | linked faculty |
 | Department (M12) | `GET /api/v1/department/overview[?periodId=]` | HOD |
+| Substitutes (M14) | `GET/POST /api/v1/exam-periods/{id}/duty-chart/assignments/{assignmentId}/substitute` | admin |
 | Swaps (M13) | `GET /api/v1/me/swap-options`, `POST /me/swap-requests[/validate]`, `GET /me/swap-requests`, `POST /swap-requests/{id}/{accept,decline,cancel}`, `GET /swap-requests`, `POST /swap-requests/{id}/{approve,reject}` | faculty / HOD / admin |
 
 **Database migrations:** V1-V9 (latest `V9__duty_swaps`). All tables in schema `invigilo`, every
@@ -453,7 +454,7 @@ Merged before this: pull requests #1 (leave-form fix) and #2 (M9); CI passed on 
   in the chart history. `UsageCheck<Faculty>` for swap requests.
 - Shared helpers: `OwnFaculty` (own faculty record, HOD department) and `CollegeTime` (college-local
   now); `MyDutiesService` and `DepartmentDashboardService` now use them.
-- `ChartView.swapsNotInDraft` + publish checklist warning: publishing a draft started before a swap
+- `ChartView.swapsNotInDraft` (renamed `changesNotInDraft` in M14) + publish checklist warning: publishing a draft started before a swap
   undoes that swap.
 - Frontend `features/swaps/`: `/faculty/swaps` (ask with live rule check, exchange-only colleagues,
   answer, cancel, history), `/hod/swaps` and `/admin/swaps` (approve/reject, filter by status);
@@ -476,4 +477,35 @@ Merged before this: pull requests #1 (leave-form fix) and #2 (M9); CI passed on 
 - No notifications beyond the in-app notices (product question Q8).
 - `adminCanReassignDirectly` is not used yet: the exam cell can change a published chart only by
   starting a new draft. Substitutes (M14) are the natural place for direct reassignment.
+
+## M14 Emergency substitutes: done  (2026-11-10)
+
+**Built** (branch `feat/substitutes`, no migration)
+- Backend: `SubstituteService` + `SubstituteController` (exam cell). Ranked candidates
+  (`ChartChecker.alternatives`, up to 15) with soft-cost and pending-leave notes plus the exclusion
+  funnel; the substitution re-checks with `ChartChecker.check` under the chart lock, hands the duty
+  over in place (`DutyAssignment.substitute`, source SUBSTITUTE), audits `DUTY_SUBSTITUTED` with the
+  required reason and invalidates open swaps of the duty (`SwapService.invalidateOpenFor`).
+  Uses policy `adminCanReassignDirectly`; refused once the session has ended.
+- `ChartView.swapsNotInDraft` became `changesNotInDraft` and now counts swaps and substitutes from the
+  audit log (`AuditRepository.countBy...ActionIn...OccurredAtAfter`).
+- Frontend: "Substitute" on each duty of the published chart (main allocation page, or the published
+  version's page while a draft is current, linked from the draft), `SubstitutePanel` (ranked list,
+  best fit marked, exclusion summary, required reason), "swapped"/"substitute" badges and matching
+  duty explanations.
+
+**Verified**
+- Backend: `SubstituteIntegrationTest` (3: ranked list and hand-over with history and the
+  substitute's dashboard; reason required, leave blocks, stale version, faculty 403, other college
+  404, policy off; open swap invalidated and draft warned); full suite 175 green.
+- Frontend: 88 tests (2 new + extended); lint, typecheck, build clean.
+- Against the running app with demo data (API): Dr. Anitha Thomas's 23 Nov FN H101 duty went to the
+  best-ranked Suresh Rao, marked SUBSTITUTE; the demo draft's warning count went from 1 to 2. The
+  substitute panel itself was not clicked through in the browser this time (the exam-cell sign-in
+  was not available to the assistant); try it at `/admin/exams/<period>/allocation/versions/2`.
+
+**Known limits**
+- The session-ended rule is not tested by moving time (shared forward-only test clock).
+- Open positions of a published chart cannot be filled from here; start a new version for that.
+- No ABSENT marking: the absent person simply loses the duty (relevant for remuneration, M17/Q3).
 

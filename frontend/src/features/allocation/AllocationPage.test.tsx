@@ -1,11 +1,11 @@
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { AxiosError, AxiosHeaders } from 'axios'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { routes } from '@/app/router'
 import { api } from '@/lib/api/client'
 import { makeAuth, makeSession, renderRoutes } from '@/test/render'
-import type { DutyChart, HistoryEntry, Suggestion, Validation, VersionSummary } from './api'
+import type { DutyChart, HistoryEntry, SubstituteOptions, Suggestion, Validation, VersionSummary } from './api'
 
 const admin = () => makeAuth(makeSession(['EXAM_CELL_ADMIN'], { college: { ...makeSession().college, status: 'ACTIVE' } }))
 const period = { id: 'p1', name: 'Mar 2027', startDate: '2027-03-01', endDate: '2027-03-05', status: 'ALLOCATING', sessionCount: 2, version: 0 }
@@ -78,7 +78,7 @@ function chart(overrides: Partial<DutyChart> = {}): DutyChart {
     publishedAt: null,
     publishedBy: null,
     publishedVersion: null,
-    swapsNotInDraft: 0,
+    changesNotInDraft: 0,
     ...overrides,
   }
 }
@@ -181,13 +181,13 @@ describe('AllocationPage', () => {
     })
 
     it('warns that publishing a draft undoes swaps made on the published version', async () => {
-      mockGets(chart({ publishedVersion: 1, chartVersion: 2, swapsNotInDraft: 2 }))
+      mockGets(chart({ publishedVersion: 1, chartVersion: 2, changesNotInDraft: 2 }))
       vi.spyOn(window, 'confirm').mockReturnValue(false)
       renderRoutes(routes, { path: '/admin/exams/p1/allocation', auth: admin() })
 
-      expect(await screen.findByText(/2 swaps were made on published version 1 after this draft was started/)).toBeInTheDocument()
+      expect(await screen.findByText(/2 swaps or substitutes were made on published version 1 after this draft was started/)).toBeInTheDocument()
       await userEvent.click(screen.getByRole('button', { name: 'Publish version 2' }))
-      expect(window.confirm).toHaveBeenCalledWith(expect.stringMatching(/2 swaps made since this draft was started will be undone/))
+      expect(window.confirm).toHaveBeenCalledWith(expect.stringMatching(/2 swaps or substitutes made since this draft was started will be undone/))
     })
 
     it('does not allow publishing while a duty breaks a strict rule', async () => {
@@ -304,6 +304,67 @@ describe('AllocationPage', () => {
       expect(await screen.findByText('1 open')).toBeInTheDocument()
       expect(screen.queryByRole('button', { name: /Replace Ravi Kumar/ })).not.toBeInTheDocument()
       expect(screen.queryByRole('button', { name: /Fill/ })).not.toBeInTheDocument()
+      // Without the policy allowing direct reassignment there are no substitutes either.
+      expect(screen.queryByRole('button', { name: /Substitute for/ })).not.toBeInTheDocument()
+    })
+  })
+
+  describe('substitutes', () => {
+    const options: SubstituteOptions = {
+      duty: { assignmentId: 'a1', date: '2027-03-01', sessionLabel: 'FN', startTime: '09:30:00', endTime: '12:30:00', hallCode: 'H1', hallName: 'Hall 1', role: 'INVIGILATOR', facultyId: 'f1', facultyName: 'Ravi Kumar', version: 3 },
+      allowed: true,
+      candidates: [
+        { facultyId: 'f2', code: 'F2', name: 'Meera Nair', departmentCode: 'CSE', duties: 1, notes: [] },
+        { facultyId: 'f3', code: 'F3', name: 'Arun Das', departmentCode: 'ECE', duties: 2, notes: ['invigilates an exam of their own department'] },
+      ],
+      excluded: { totalFaculty: 6, eliminated: { UNAVAILABLE: 1, BUSY_IN_SESSION: 2 }, suggestions: [] },
+    }
+
+    function mockPublished(allowDirect = true) {
+      const published = chart({ status: 'PUBLISHED', publishedAt: '2027-02-21T09:00:00Z' })
+      vi.spyOn(api, 'get').mockImplementation(async (url: string) => {
+        if (url === '/exam-periods/p1') return { data: period }
+        if (url === '/exam-periods/p1/duty-chart') return { data: published }
+        if (url === '/exam-periods/p1/duty-chart/history' || url === '/exam-periods/p1/duty-chart/versions') return { data: [] }
+        if (url === '/policy') return { data: { version: 1, saved: true, settings: { swaps: { swapsEnabled: true, recipientMustAccept: true, hodApprovalRequired: false, adminCanReassignDirectly: allowDirect } } } }
+        if (url === '/exam-periods/p1/duty-chart/assignments/a1/substitute') return { data: options }
+        throw new Error(url)
+      })
+      return vi.spyOn(api, 'post').mockResolvedValue({ data: published })
+    }
+
+    it('gives a duty of the published chart to a ranked substitute with a reason', async () => {
+      const post = mockPublished()
+      renderRoutes(routes, { path: '/admin/exams/p1/allocation', auth: admin() })
+
+      await userEvent.click(await screen.findByRole('button', { name: 'Substitute for Ravi Kumar in H1' }))
+      const panel = await screen.findByRole('region', { name: 'Substitute for Ravi Kumar' })
+      expect(within(panel).getByText(/best fit/)).toBeInTheDocument()
+      expect(within(panel).getByText('invigilates an exam of their own department')).toBeInTheDocument()
+      expect(within(panel).getByText(/Of 6 faculty:/)).toBeInTheDocument()
+
+      // A reason is required.
+      await userEvent.click(within(panel).getByRole('radio', { name: /Meera Nair/ }))
+      await userEvent.click(within(panel).getByRole('button', { name: 'Give the duty to the substitute' }))
+      expect(await within(panel).findByText(/Say why/)).toBeInTheDocument()
+      expect(post).not.toHaveBeenCalled()
+
+      await userEvent.type(within(panel).getByLabelText('Reason'), 'absent: fever')
+      await userEvent.click(within(panel).getByRole('button', { name: 'Give the duty to the substitute' }))
+
+      await waitFor(() =>
+        expect(post).toHaveBeenCalledWith('/exam-periods/p1/duty-chart/assignments/a1/substitute', { facultyId: 'f2', version: 3, reason: 'absent: fever' }),
+      )
+      expect(await screen.findByText(/Meera Nair now has the duty of Ravi Kumar/)).toBeInTheDocument()
+      expect(screen.queryByRole('region', { name: 'Substitute for Ravi Kumar' })).not.toBeInTheDocument()
+    })
+
+    it('offers no substitutes when the policy does not allow direct reassignment', async () => {
+      mockPublished(false)
+      renderRoutes(routes, { path: '/admin/exams/p1/allocation', auth: admin() })
+
+      expect(await screen.findByText('1 open')).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /Substitute for/ })).not.toBeInTheDocument()
     })
   })
 })

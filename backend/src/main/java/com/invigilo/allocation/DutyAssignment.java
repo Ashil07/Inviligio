@@ -84,6 +84,13 @@ public class DutyAssignment extends TenantScopedEntity {
         this.explanation = null;
     }
 
+    /** Gives this duty to a substitute chosen by the exam cell (published chart). */
+    void substitute(Faculty to) {
+        this.faculty = to;
+        this.source = Source.SUBSTITUTE;
+        this.explanation = null;
+    }
+
     /** Gives this duty to the other side of an approved swap. */
     void swapTo(Faculty to) {
         this.faculty = to;

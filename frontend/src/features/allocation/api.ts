@@ -104,8 +104,8 @@ export interface DutyChart {
   publishedBy: string | null
   /** The period's currently published version, if any. */
   publishedVersion: number | null
-  /** Draft only: swaps made on the published version after this draft was started (they are not in it). */
-  swapsNotInDraft: number
+  /** Draft only: swaps and substitutes made on the published version after this draft was started (they are not in it). */
+  changesNotInDraft: number
 }
 
 export interface VersionSummary {
@@ -275,7 +275,61 @@ export function useRemoveDuty(periodId: string) {
     (await api.delete<DutyChart>(`/exam-periods/${periodId}/duty-chart/assignments/${assignmentId}`, { params: { version, reason } })).data)
 }
 
+export interface SubstituteCandidate {
+  facultyId: string
+  code: string
+  name: string
+  departmentCode: string
+  duties: number
+  notes: string[]
+}
+
+/** Who could take over a duty of the published chart. `allowed`: the policy lets the exam cell reassign directly. */
+export interface SubstituteOptions {
+  duty: {
+    assignmentId: string
+    date: string
+    sessionLabel: string
+    startTime: string
+    endTime: string
+    hallCode: string
+    hallName: string
+    role: Role
+    facultyId: string
+    facultyName: string
+    version: number
+  }
+  allowed: boolean
+  candidates: SubstituteCandidate[]
+  excluded: Unfilled['reason']
+}
+
+export function useSubstituteOptions(periodId: string, assignmentId: string) {
+  return useQuery({
+    queryKey: [...key(periodId), 'substitute', assignmentId] as const,
+    queryFn: async () => (await api.get<SubstituteOptions>(`/exam-periods/${periodId}/duty-chart/assignments/${assignmentId}/substitute`)).data,
+    staleTime: 0,
+  })
+}
+
+/**
+ * Gives a published duty to a substitute. The published chart may be shown on the version page
+ * while a draft is current, so everything of the period is refetched instead of overwritten.
+ */
+export function useSubstitute(periodId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ assignmentId, ...body }: { assignmentId: string; facultyId: string; version: number; reason: string }) =>
+      (await api.post<DutyChart>(`/exam-periods/${periodId}/duty-chart/assignments/${assignmentId}/substitute`, body)).data,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: key(periodId) })
+    },
+  })
+}
+
 export function explain(d: Duty): string {
+  if (d.source === 'SWAP') return 'Took this duty in an approved swap.'
+  if (d.source === 'SUBSTITUTE') return 'Chosen by the examination cell as a substitute.'
   if (!d.explanation) return 'Assigned manually.'
   const e = d.explanation
   const base = `Chosen from ${e.eligibleCandidates} eligible faculty; had ${e.dutiesBefore} duty(ies) in this period before.`

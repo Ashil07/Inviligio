@@ -30,5 +30,9 @@ interface SwapRequestRepository extends JpaRepository<SwapRequest, UUID> {
 
     long countByRequester_IdOrTarget_Id(UUID requesterId, UUID targetId);
 
-    long countByChartIdAndStatusAndAppliedAtAfter(UUID chartId, SwapRequest.Status status, java.time.Instant after);
+    @Query("""
+            select s from SwapRequest s
+            where s.status in :statuses and (s.requesterAssignment.id = :assignmentId or s.targetAssignment.id = :assignmentId)
+            """)
+    List<SwapRequest> findTouching(UUID assignmentId, Collection<SwapRequest.Status> statuses);
 }

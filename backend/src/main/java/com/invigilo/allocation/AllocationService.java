@@ -10,6 +10,7 @@ import com.invigilo.allocation.engine.AllocationResult.Explanation;
 import com.invigilo.allocation.engine.AllocationResult.Role;
 import com.invigilo.allocation.engine.ChartChecker;
 import com.invigilo.allocation.engine.ProblemFingerprint;
+import com.invigilo.audit.AuditRepository;
 import com.invigilo.audit.AuditService;
 import com.invigilo.availability.AvailabilityService;
 import com.invigilo.common.error.ApiException;
@@ -62,6 +63,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class AllocationService {
 
+    /** Audit actions that change a published chart in place. */
+    static final List<String> PUBLISHED_CHART_CHANGES = List.of("DUTY_SWAPPED", "DUTY_HANDED_OVER", "DUTY_SUBSTITUTED");
+
     private static final Logger log = LoggerFactory.getLogger(AllocationService.class);
 
     public record DutyView(UUID assignmentId, UUID facultyId, String facultyCode, String facultyName, String departmentCode,
@@ -94,7 +98,7 @@ public class AllocationService {
                             Instant generatedAt, Integer policyVersion, boolean policyChanged, boolean inputsChanged,
                             AllocationResult.Stats stats, List<SessionView> sessions, List<UnfilledView> unfilled,
                             List<WorkloadRow> workload, List<IssueView> issues, long version, Instant publishedAt,
-                            String publishedBy, Integer publishedVersion, int swapsNotInDraft) {}
+                            String publishedBy, Integer publishedVersion, int changesNotInDraft) {}
 
     /** A line in the period's list of chart versions. */
     public record VersionSummary(int chartVersion, DutyChart.Status status, Instant createdAt, Instant publishedAt,
@@ -113,7 +117,7 @@ public class AllocationService {
     private final DutyChartRepository charts;
     private final DutyAssignmentRepository assignments;
     private final UnfilledPositionRepository unfilled;
-    private final SwapRequestRepository swaps;
+    private final AuditRepository auditLog;
     private final AuditService audit;
     private final AppUserRepository users;
     private final Clock clock;
@@ -122,7 +126,7 @@ public class AllocationService {
     public AllocationService(ExamPeriodService periods, ScheduleService schedule, FacultyService facultyService,
                              AvailabilityService availability, PolicyService policies, AllocationRunRepository runs,
                              DutyChartRepository charts, DutyAssignmentRepository assignments,
-                             UnfilledPositionRepository unfilled, SwapRequestRepository swaps, AuditService audit,
+                             UnfilledPositionRepository unfilled, AuditRepository auditLog, AuditService audit,
                              AppUserRepository users, Clock clock) {
         this.periods = periods;
         this.schedule = schedule;
@@ -133,7 +137,7 @@ public class AllocationService {
         this.charts = charts;
         this.assignments = assignments;
         this.unfilled = unfilled;
-        this.swaps = swaps;
+        this.auditLog = auditLog;
         this.audit = audit;
         this.users = users;
         this.clock = clock;
@@ -299,15 +303,16 @@ public class AllocationService {
                 && !ProblemFingerprint.of(build(period).problem()).equals(chart.getInputHash());
         Optional<DutyChart> published = charts.findByPeriodIdAndStatus(period.getId(), DutyChart.Status.PUBLISHED);
         Integer publishedVersion = published.map(DutyChart::getChartVersion).orElse(null);
-        // Swaps change the published chart only; a draft started earlier does not have them.
-        int swapsNotInDraft = chart.getStatus() != DutyChart.Status.DRAFT ? 0 : published
-                .map(p -> (int) swaps.countByChartIdAndStatusAndAppliedAtAfter(p.getId(), SwapRequest.Status.APPROVED, chart.getCreatedAt()))
+        // Swaps and substitutes change the published chart only; a draft started earlier does not have them.
+        int changesNotInDraft = chart.getStatus() != DutyChart.Status.DRAFT ? 0 : published
+                .map(p -> (int) auditLog.countByEntityTypeAndEntityIdAndActionInAndOccurredAtAfter(ChartEditService.ENTITY, p.getId(),
+                        PUBLISHED_CHART_CHANGES, chart.getCreatedAt()))
                 .orElse(0);
         String publishedBy = chart.getPublishedBy() == null ? null : userNames(List.of(chart.getPublishedBy())).get(chart.getPublishedBy());
         return new ChartView(chart.getId(), period.getId(), period.getName(), chart.getChartVersion(), chart.getStatus(),
                 chart.getCreatedAt(), policyVersion, !Objects.equals(latestPolicyId, chart.getPolicyId()), inputsChanged,
                 stats, sessionViews, gapViews, workload, issues, chart.getVersion(), chart.getPublishedAt(), publishedBy,
-                publishedVersion, swapsNotInDraft);
+                publishedVersion, changesNotInDraft);
     }
 
     private static DutyView dutyView(DutyAssignment d) {

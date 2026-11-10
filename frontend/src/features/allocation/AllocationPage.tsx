@@ -2,9 +2,10 @@ import { AlertTriangle, CheckCircle2, Info } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router'
 import { Button, ErrorAlert } from '@/components/ui/form'
-import { Section, SelectField } from '@/components/ui/fields'
+import { Section, SelectField, SuccessNotice } from '@/components/ui/fields'
 import { PageHeader, Table } from '@/components/ui/layout'
 import { FullPageSpinner } from '@/components/ui/Spinner'
+import { usePolicy } from '@/features/policy/api'
 import { formatDate, hhmm, usePeriod } from '@/features/schedule/api'
 import { toApiProblem } from '@/lib/api/client'
 import { formatDateTime } from '@/lib/forms'
@@ -23,6 +24,7 @@ import {
   type Unfilled,
 } from './api'
 import { ChartEditor, type EditTarget } from './ChartEditor'
+import { SubstitutePanel, type SubstituteTarget } from './SubstitutePanel'
 
 /** Generate, edit, review and publish the period's duty chart. */
 export function AllocationPage() {
@@ -113,6 +115,11 @@ function ChartReview({ chart, readOnly = false }: { chart: DutyChart; readOnly?:
   const editable = chart.status === 'DRAFT' && !readOnly
   const [editing, setEditing] = useState<EditTarget | null>(null)
   const edit = editable ? setEditing : undefined
+  // Substitutes go into the published chart, also from its version page while a draft is current.
+  const policy = usePolicy()
+  const substitutable = chart.status === 'PUBLISHED' && (policy.data?.settings.swaps.adminCanReassignDirectly ?? false)
+  const [substituting, setSubstituting] = useState<SubstituteTarget | null>(null)
+  const [notice, setNotice] = useState('')
 
   /** Opens the replace panel for a duty listed as an issue. */
   function replaceIssue(assignmentId: string) {
@@ -136,11 +143,20 @@ function ChartReview({ chart, readOnly = false }: { chart: DutyChart; readOnly?:
           {chart.status === 'PUBLISHED' && chart.publishedAt && ` Published ${formatDateTime(chart.publishedAt)}${chart.publishedBy ? ` by ${chart.publishedBy}` : ''}; this is what faculty see.`}
         </p>
         {chart.status === 'DRAFT' && chart.publishedVersion != null && (
-          <p>Version {chart.publishedVersion} is published and stays in force until you publish this draft.</p>
+          <p>
+            Version {chart.publishedVersion} is published and stays in force until you publish this draft.{' '}
+            <Link to={`/admin/exams/${chart.periodId}/allocation/versions/${chart.publishedVersion}`} className="font-medium text-indigo-700 hover:underline">
+              Open version {chart.publishedVersion}
+            </Link>{' '}
+            to choose substitutes for it.
+          </p>
         )}
         {editable && <p>You can change any duty below; every change is checked against the same rules as generation.</p>}
-        {chart.status === 'PUBLISHED' && !readOnly && (
-          <p>A published chart cannot change. To change it, start a new version, edit it and publish it.</p>
+        {chart.status === 'PUBLISHED' && (
+          <p>
+            Duties of a published chart change only through approved swaps{substitutable ? ' and substitutes you choose below' : ''}. For bigger
+            changes, start a new version, edit it and publish it.
+          </p>
         )}
       </div>
       {chart.issues.length > 0 && (
@@ -207,8 +223,33 @@ function ChartReview({ chart, readOnly = false }: { chart: DutyChart; readOnly?:
         </Section>
       )}
       {editing && <ChartEditor key={JSON.stringify(editing)} chart={chart} target={editing} onDone={() => setEditing(null)} />}
+      {notice && <SuccessNotice>{notice}</SuccessNotice>}
+      {substituting && (
+        <SubstitutePanel
+          key={substituting.duty.assignmentId}
+          periodId={chart.periodId}
+          target={substituting}
+          onDone={(message) => {
+            setSubstituting(null)
+            setNotice(message)
+          }}
+        />
+      )}
       {editable && <Publish chart={chart} />}
-      <ChartGrid sessions={chart.sessions} unfilled={chart.unfilled} issueIds={new Set(chart.issues.map((i) => i.assignmentId))} onEdit={edit} />
+      <ChartGrid
+        sessions={chart.sessions}
+        unfilled={chart.unfilled}
+        issueIds={new Set(chart.issues.map((i) => i.assignmentId))}
+        onEdit={edit}
+        onSubstitute={
+          substitutable
+            ? (target) => {
+                setNotice('')
+                setSubstituting(target)
+              }
+            : undefined
+        }
+      />
       <Workload chart={chart} />
       {!readOnly && <History periodId={chart.periodId} />}
     </div>
@@ -229,11 +270,13 @@ function ChartGrid({
   unfilled,
   issueIds,
   onEdit,
+  onSubstitute,
 }: {
   sessions: ChartSession[]
   unfilled: Unfilled[]
   issueIds: Set<string>
   onEdit?: (target: EditTarget) => void
+  onSubstitute?: (target: SubstituteTarget) => void
 }) {
   const dates = [...new Set(sessions.map((s) => s.date))]
   const [date, setDate] = useState(dates[0] ?? '')
@@ -241,7 +284,13 @@ function ChartGrid({
   return (
     <Section
       title="Duty chart"
-      description={onEdit ? 'Click a name to see why that person was chosen. Replace, remove or fill any position.' : 'Click a name to see why that person was chosen.'}
+      description={
+        onEdit
+          ? 'Click a name to see why that person was chosen. Replace, remove or fill any position.'
+          : onSubstitute
+            ? 'Click a name to see why that person was chosen. If someone cannot do a duty, choose a substitute.'
+            : 'Click a name to see why that person was chosen.'
+      }
     >
       <div className="max-w-xs">
         <SelectField label="Date" value={date} onChange={(e) => setDate(e.target.value)} options={dates.map((d) => ({ value: d, label: formatDate(d) }))} />
@@ -266,6 +315,8 @@ function ChartGrid({
                             {d.facultyName} <span className="text-slate-500">({d.departmentCode})</span>
                             {d.role === 'CHIEF' && <span className="ml-2 rounded bg-indigo-50 px-1.5 text-xs font-medium text-indigo-700">chief</span>}
                             {d.source === 'MANUAL' && <span className="ml-2 rounded bg-slate-100 px-1.5 text-xs font-medium text-slate-600">edited</span>}
+                            {d.source === 'SWAP' && <span className="ml-2 rounded bg-slate-100 px-1.5 text-xs font-medium text-slate-600">swapped</span>}
+                            {d.source === 'SUBSTITUTE' && <span className="ml-2 rounded bg-amber-50 px-1.5 text-xs font-medium text-amber-800">substitute</span>}
                             {issueIds.has(d.assignmentId) && <span className="ml-2 text-xs font-medium">breaks a rule</span>}
                           </summary>
                           <p className="mt-1 text-xs text-slate-600">{explain(d)}</p>
@@ -289,6 +340,16 @@ function ChartGrid({
                               Remove
                             </button>
                           </span>
+                        )}
+                        {onSubstitute && (
+                          <button
+                            type="button"
+                            className="shrink-0 text-xs font-medium text-indigo-700 hover:underline"
+                            aria-label={`Substitute for ${d.facultyName} in ${h.hallCode}`}
+                            onClick={() => onSubstitute({ session: s, hall: h, duty: d })}
+                          >
+                            Substitute
+                          </button>
                         )}
                       </li>
                     ))}
@@ -333,7 +394,8 @@ function Publish({ chart }: { chart: DutyChart }) {
     const lines = [`Publish version ${chart.chartVersion}? Faculty will see these duties and the chart can no longer be edited.`]
     if (chart.publishedVersion != null) lines.push(`It replaces published version ${chart.publishedVersion}.`)
     if (open > 0) lines.push(`${open} position${open === 1 ? ' is' : 's are'} still open.`)
-    if (chart.swapsNotInDraft > 0) lines.push(`${chart.swapsNotInDraft} swap${chart.swapsNotInDraft === 1 ? '' : 's'} made since this draft was started will be undone.`)
+    if (chart.changesNotInDraft > 0)
+      lines.push(`${chart.changesNotInDraft} swap${chart.changesNotInDraft === 1 ? ' or substitute' : 's or substitutes'} made since this draft was started will be undone.`)
     if (!window.confirm(lines.join('\n\n'))) return
     setProblem(null)
     try {
@@ -355,12 +417,11 @@ function Publish({ chart }: { chart: DutyChart }) {
         <Check ok={open === 0} warn>
           {open === 0 ? 'Every position is filled.' : `${open} position${open === 1 ? ' is' : 's are'} still open. You can publish anyway.`}
         </Check>
-        {chart.swapsNotInDraft > 0 && (
+        {chart.changesNotInDraft > 0 && (
           <Check ok={false} warn>
-            {chart.swapsNotInDraft === 1 ? '1 swap was' : `${chart.swapsNotInDraft} swaps were`} made on published version{' '}
-            {chart.publishedVersion} after this draft was started. This draft does not have{' '}
-            {chart.swapsNotInDraft === 1 ? 'it' : 'them'}: publishing it undoes {chart.swapsNotInDraft === 1 ? 'that swap' : 'those swaps'}.
-            See Swaps for what changed.
+            {chart.changesNotInDraft === 1 ? '1 swap or substitute was' : `${chart.changesNotInDraft} swaps or substitutes were`} made on
+            published version {chart.publishedVersion} after this draft was started. This draft does not have{' '}
+            {chart.changesNotInDraft === 1 ? 'it' : 'them'}: publishing it undoes {chart.changesNotInDraft === 1 ? 'that change' : 'those changes'}.
           </Check>
         )}
         {(chart.inputsChanged || chart.policyChanged) && (

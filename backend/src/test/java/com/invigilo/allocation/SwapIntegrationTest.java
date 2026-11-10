@@ -244,11 +244,11 @@ class SwapIntegrationTest extends ChartScenario {
         Duty mine = morningDutyInH2();
         String free = freeInMorning(chart());
         ok(send(POST, base + "/draft", null));
-        assertThat(chart()).containsEntry("status", "DRAFT").containsEntry("swapsNotInDraft", 0);
+        assertThat(chart()).containsEntry("status", "DRAFT").containsEntry("changesNotInDraft", 0);
 
         ok(as(loginAs(mine.code()), POST, "/api/v1/me/swap-requests", input(mine, facultyIds.get(free), null)));
 
-        assertThat(chart()).containsEntry("status", "DRAFT").containsEntry("swapsNotInDraft", 1);
+        assertThat(chart()).containsEntry("status", "DRAFT").containsEntry("changesNotInDraft", 1);
     }
 
     @Test

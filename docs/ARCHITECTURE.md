@@ -379,7 +379,17 @@ new DRAFT version that supersedes the published one on publish.
   `POST /swap-requests/{id}/{accept,decline,cancel}` (faculty), `GET /swap-requests?status=`,
   `POST /swap-requests/{id}/{approve,reject}` (HOD scoped to department, exam cell all); actions send
   the swap's `version`. Swaps change the published chart only: a DRAFT started earlier reports
-  `swapsNotInDraft` and the publish checklist warns that publishing it undoes them.
+  `changesNotInDraft` and the publish checklist warns that publishing it undoes them.
+- Emergency substitutes *(M14, `allocation/SubstituteService`, no migration)* — exam cell only, while
+  policy `swaps.adminCanReassignDirectly` is on (else `DIRECT_REASSIGNMENT_DISABLED`), for a duty of
+  the PUBLISHED chart until its session ends (`DUTY_ENDED`). `GET .../duty-chart/assignments/{id}/substitute`
+  lists up to 15 candidates from `ChartChecker.alternatives` (generation's ranking, soft-cost notes,
+  pending-leave note) and the exclusion funnel; `POST` the same path `{facultyId, version, reason}`
+  (reason required) locks the chart, re-checks with `ChartChecker.check` and hands the duty over in
+  place (source `SUBSTITUTE`, so the substitute gets the duty and its credit). Audit
+  `DUTY_SUBSTITUTED` on `duty_chart` with the reason; open swaps of that duty become INVALIDATED.
+  `changesNotInDraft` counts `DUTY_SWAPPED`, `DUTY_HANDED_OVER` and `DUTY_SUBSTITUTED` audit entries
+  on the published chart since the draft was created.
 - `remuneration_rate` — role, exam_type/session type, amount, currency, effective_from/to.
 
 **Audit**

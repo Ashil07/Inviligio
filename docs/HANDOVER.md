@@ -601,3 +601,33 @@ Merged before this: pull requests #1 (leave-form fix) and #2 (M9); CI passed on 
 - No faculty view of their own pay yet; HODs do not see pay.
 - Attendance is only "absent" or not; no partial duties or COMPLETED marking.
 
+## M18 Final integration: in progress  (2026-11-10)
+
+**Done** (branch `chore/final-integration`, no migration)
+- Security review of the whole app (results and checklist in `docs/DEPLOYMENT.md` §5). Fixed: no limit
+  on password guessing → `LoginThrottle` (429 after 5 failures per email in 15 minutes); CSV formula
+  injection in reports → `ReportWriters.safe`; Swagger UI/OpenAPI always on → `API_DOCS_ENABLED`.
+  Checked: tenant filtering (only raw SQL is `select 1`), role checks on every exam-cell endpoint,
+  login college choice limited to the user's memberships, no stack traces in errors, cookie flags,
+  tokens in memory only, no raw HTML in the frontend, no committed secrets, `npm audit` clean.
+- Performance check: a script builds a 300-faculty, 25-hall, 30-session test college through the API
+  and times the heavy operations (`docs/DEPLOYMENT.md` §6). Improvements: Hibernate JDBC batching
+  (generation 7.7 → 6.3 s locally, more against a remote database), Excel widths without
+  `autoSizeColumn` (4.5 → 2.7 s). Everything a user waits for interactively is under one second.
+  (The local demo database now also holds two test colleges named "Perf College ..."; delete
+  `backend/.dev-db` for a clean demo.)
+- Walkthrough per role on the demo data: 30 checks over the main exam-cell, HOD and faculty features
+  through the API (all OK, including the 403s for features of other roles), and every HOD and faculty
+  page opened in the browser without errors. The exam-cell pages were checked through the API only.
+- `docs/DEPLOYMENT.md`: Supabase setup, environment variables, frontend hosting (same-site rule for
+  the refresh cookie), first start, security checklist, expected performance.
+- Tests: `LoginThrottleIntegrationTest`, a CSV formula case in `ReportWritersTest`; full backend
+  suite 191 green.
+
+- **Supabase connected** (2026-11-10): project in South Asia (Mumbai), session pooler
+  `aws-0-ap-south-1.pooler.supabase.com:5432`, Data API switched off at creation. `backend/.env` holds
+  the connection (git-ignored); start with the `backend-supabase` launch configuration
+  (`./mvnw spring-boot:run`, no demo profile). On first start Flyway applied V1-V10 to an empty schema
+  `invigilo` in 6.2 s (PostgreSQL 17.11); `/api/v1/system/status` reports the database UP at version 10.
+  The local demo (`LocalDevApplication`) still uses its embedded database and ignores `DB_URL`.
+

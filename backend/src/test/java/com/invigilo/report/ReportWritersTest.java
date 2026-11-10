@@ -38,6 +38,19 @@ class ReportWritersTest {
     }
 
     @Test
+    void csvNeutralisesSpreadsheetFormulasButKeepsNegativeNumbers() {
+        assertThat(ReportWriters.safe("=HYPERLINK(\"http://x\")")).isEqualTo("'=HYPERLINK(\"http://x\")");
+        assertThat(ReportWriters.safe("+1+1")).isEqualTo("'+1+1");
+        assertThat(ReportWriters.safe("@SUM(A1)")).isEqualTo("'@SUM(A1)");
+        assertThat(ReportWriters.safe("-cmd")).isEqualTo("'-cmd");
+        assertThat(ReportWriters.safe("-12.5")).isEqualTo("-12.5");
+        assertThat(ReportWriters.safe("Asha Rao")).isEqualTo("Asha Rao");
+
+        Report evil = new Report("x", List.of(), "Date", List.of(new Section("Mon", COLUMNS, List.of(List.of("H1", "=1+1", "2")))));
+        assertThat(new String(ReportWriters.csv(evil), StandardCharsets.UTF_8)).contains("Mon,H1,'=1+1,2");
+    }
+
+    @Test
     void csvWritesBlocksWhenSectionsDiffer() {
         Report mixed = new Report("Fairness", List.of(), null, List.of(
                 new Section("Summary", List.of(Column.text("Measure"), Column.number("Value")), List.of(List.of("Filled", "5"))),

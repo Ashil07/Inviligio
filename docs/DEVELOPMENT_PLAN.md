@@ -87,7 +87,7 @@ admin page, then start M9.
 | M15 | Fairness analytics | **Done.** From published duties: per-faculty totals and even share, mean/min/max/std-dev, department comparison, history across periods, unfilled. Recharts page `/admin/analytics`. |
 | M16 | Reports | **Done.** PDF (OpenPDF), Excel (POI, streaming), CSV: duty chart by date, session, hall, faculty or department with filters; workload; fairness. Remuneration reports come with M17. |
 | M17 | Remuneration | **Done.** Rates per role with effective dates; pay from completed duties (session over, not absent); absent marking on the published chart; per-person and department totals; report in PDF/Excel/CSV. |
-| M18 | Final integration | **Connect Supabase** (session pooler, `backend/.env`), run migrations there, end-to-end walkthrough per role, security review, performance check on realistic data, deployment notes. |
+| M18 | Final integration | **In progress.** Done: security review (login attempt limit, CSV formula guard, API docs switch), performance check on a 300-faculty test college (batched writes, faster Excel), walkthrough per role, `docs/DEPLOYMENT.md`. **Supabase connected** (Mumbai, session pooler) and all migrations applied there. |
 
 ## 5. Open product questions
 

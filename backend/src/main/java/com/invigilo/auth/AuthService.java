@@ -49,12 +49,14 @@ public class AuthService {
     private final RefreshTokenService refreshTokens;
     private final AccessService access;
     private final Clock clock;
+    private final LoginThrottle throttle;
     /** Compared against when the email is unknown, so response time does not reveal which emails exist. */
     private final String dummyHash;
 
     public AuthService(SystemTransactions system, CollegeRepository colleges, AppUserRepository users,
                        CollegeMembershipRepository memberships, PasswordEncoder passwordEncoder,
-                       TokenService tokens, RefreshTokenService refreshTokens, AccessService access, Clock clock) {
+                       TokenService tokens, RefreshTokenService refreshTokens, AccessService access, Clock clock,
+                       LoginThrottle throttle) {
         this.system = system;
         this.colleges = colleges;
         this.users = users;
@@ -64,6 +66,7 @@ public class AuthService {
         this.refreshTokens = refreshTokens;
         this.access = access;
         this.clock = clock;
+        this.throttle = throttle;
         this.dummyHash = passwordEncoder.encode("invigilo-timing-equalizer");
     }
 
@@ -90,12 +93,15 @@ public class AuthService {
 
     public LoginResult login(LoginRequest request) {
         String email = AppUser.normalizeEmail(request.email());
+        throttle.check(email);
         Optional<AppUser> user = system.execute(() -> users.findByEmail(email));
         boolean passwordMatches = passwordEncoder.matches(
                 request.password(), user.map(AppUser::getPasswordHash).orElse(dummyHash));
         if (user.isEmpty() || !passwordMatches) {
+            throttle.failed(email);
             throw ApiException.unauthorized("INVALID_CREDENTIALS", "Incorrect email or password");
         }
+        throttle.succeeded(email);
         if (!user.get().isActive()) {
             throw ApiException.forbidden("ACCOUNT_DISABLED", "This account has been disabled");
         }

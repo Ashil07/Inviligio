@@ -501,6 +501,17 @@ college. Tests share the database, so create data with unique codes (`TestData`)
 truncating. Swapped from Testcontainers in M1 because the development machines run without Docker;
 the tests still exercise real PostgreSQL, Flyway and Hibernate.
 
+## 9b. Hardening from the M18 review
+
+- `auth/LoginThrottle`: 5 wrong passwords per email within 15 minutes → `429 TOO_MANY_ATTEMPTS` for
+  that email until the window passes (in memory, per instance; a success clears it).
+- `ReportWriters.safe`: CSV cells starting with `=`, `+`, `@`, tab, CR or a non-numeric `-` get a
+  leading apostrophe (CSV/formula injection; names are user-typed).
+- Hibernate JDBC batching (`batch_size` 50, ordered inserts/updates) for chart generation and
+  publishing against a remote database; Excel column widths from text instead of `autoSizeColumn`.
+- `API_DOCS_ENABLED` switches the OpenAPI document and Swagger UI off in production.
+- Deployment and the full checklist: `docs/DEPLOYMENT.md`.
+
 ## 10. Database connectivity (Supabase)
 
 - JDBC URL from Supabase *Connect → Session pooler* (`aws-0-<region>.pooler.supabase.com:5432`,

@@ -85,7 +85,7 @@ admin page, then start M9.
 | M13 | Duty swaps | **Done.** Handover or exchange; colleague accepts, optional HOD approval; applied under a chart lock after re-checking with `ChartChecker` (else INVALIDATED); audited; publish warns when a draft lacks swaps. |
 | M14 | Emergency substitutes | **Done.** Ranked candidates from `ChartChecker` with notes and the exclusion funnel; exam cell picks one with a reason; duty handed over under a chart lock; audited; open swaps of the duty invalidated. |
 | M15 | Fairness analytics | **Done.** From published duties: per-faculty totals and even share, mean/min/max/std-dev, department comparison, history across periods, unfilled. Recharts page `/admin/analytics`. |
-| M16 | Reports | PDF (OpenPDF), Excel (POI, streaming), CSV: full, faculty-, hall-, department-, date-, session-wise charts; workload, fairness, remuneration; filters. |
+| M16 | Reports | **Done.** PDF (OpenPDF), Excel (POI, streaming), CSV: duty chart by date, session, hall, faculty or department with filters; workload; fairness. Remuneration reports come with M17. |
 | M17 | Remuneration | Rates with effective dates per college; computed from completed duties; department totals. |
 | M18 | Final integration | **Connect Supabase** (session pooler, `backend/.env`), run migrations there, end-to-end walkthrough per role, security review, performance check on realistic data, deployment notes. |
 

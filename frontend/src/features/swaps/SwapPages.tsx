@@ -108,12 +108,16 @@ function RequestSwap() {
 
   async function onSubmit(values: SwapValues) {
     setSent(null)
-    const swap = await request.mutateAsync({
-      assignmentId: values.assignmentId,
-      targetFacultyId: values.targetFacultyId,
-      targetAssignmentId: values.exchange || null,
-      reason: values.reason || undefined,
-    })
+    // A failure is shown from request.error; catching keeps it from becoming an unhandled rejection.
+    const swap = await request
+      .mutateAsync({
+        assignmentId: values.assignmentId,
+        targetFacultyId: values.targetFacultyId,
+        targetAssignmentId: values.exchange || null,
+        reason: values.reason || undefined,
+      })
+      .catch(() => null)
+    if (!swap) return
     setSent(swap)
     form.reset({ assignmentId: '', targetFacultyId: '', exchange: '', reason: '' })
   }

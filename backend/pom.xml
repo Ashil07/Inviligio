@@ -26,7 +26,6 @@
         <springdoc.version>2.8.17</springdoc.version>
         <embedded-postgres.version>2.2.2</embedded-postgres.version>
         <embedded-postgres-binaries.version>17.11.0</embedded-postgres-binaries.version>
-        <!-- OpenPDF and POI are reserved for Developer 2 (reports): add those dependencies with the export module. -->
         <openpdf.version>2.4.0</openpdf.version>
         <poi.version>5.5.1</poi.version>
         <commons-csv.version>1.14.1</commons-csv.version>
@@ -81,6 +80,18 @@
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-csv</artifactId>
             <version>${commons-csv.version}</version>
+        </dependency>
+
+        <!-- Report downloads (M16): PDF and Excel -->
+        <dependency>
+            <groupId>com.github.librepdf</groupId>
+            <artifactId>openpdf</artifactId>
+            <version>${openpdf.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>${poi.version}</version>
         </dependency>
 
         <!-- OpenAPI spec (importable into Postman) + Swagger UI -->

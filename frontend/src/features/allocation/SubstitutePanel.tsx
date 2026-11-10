@@ -38,7 +38,11 @@ export function SubstitutePanel({ periodId, target, onDone }: { periodId: string
   async function onSubmit(values: Values) {
     if (!options.data) return
     const chosen = options.data.candidates.find((c) => c.facultyId === values.facultyId)
-    await save.mutateAsync({ assignmentId: duty.assignmentId, facultyId: values.facultyId, version: options.data.duty.version, reason: values.reason })
+    // A failure is shown from save.error; catching keeps it from becoming an unhandled rejection.
+    const saved = await save
+      .mutateAsync({ assignmentId: duty.assignmentId, facultyId: values.facultyId, version: options.data.duty.version, reason: values.reason })
+      .catch(() => null)
+    if (!saved) return
     onDone(`${chosen?.name ?? 'The substitute'} now has the duty of ${duty.facultyName} (${where}).`)
   }
 

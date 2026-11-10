@@ -216,6 +216,7 @@ export function useChartVersions(periodId: string) {
   return useQuery({
     queryKey: [...key(periodId), 'versions'] as const,
     queryFn: async () => (await api.get<VersionSummary[]>(`/exam-periods/${periodId}/duty-chart/versions`)).data,
+    enabled: !!periodId,
   })
 }
 

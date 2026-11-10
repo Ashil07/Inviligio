@@ -75,7 +75,7 @@ No Lombok, no MapStruct: Java records cover DTOs, and explicit mapping is short 
 | DB | PostgreSQL 17 (Supabase; local via Docker) | |
 | API docs | springdoc-openapi 2.8.17 | `/swagger-ui.html`; `/v3/api-docs` imports straight into Postman. |
 | Tests (BE) | JUnit 5, Mockito, Spring Boot Test, zonky embedded-postgres 2.2.2 (PostgreSQL 17.11) | Real PostgreSQL in tests with no Docker and no hosted DB. |
-| Reports (Developer 2) | OpenPDF 2.4.0, Apache POI 5.5.1, Commons CSV 1.14.1 | Versions pinned in `pom.xml` properties; add the deps when the report module is built. |
+| Reports (Developer 2) | OpenPDF 2.4.0, Apache POI 5.5.1, Commons CSV 1.14.1 | In use since M16 (`report/`); OpenPDF 2.4 still uses the `com.lowagie` packages. |
 | Node | 24 | |
 | Frontend | React 19, Vite 8, TypeScript 7, Tailwind CSS 4 | |
 | Routing / HTTP | React Router 8, Axios 1.x | |
@@ -363,6 +363,17 @@ the open positions with their exclusion counts. Per-person figures are over the 
 faculty now (as in the chart statistics); for older periods this is an approximation. The frontend
 page `/admin/analytics` (Recharts, loaded on demand) shows a distribution chart with the average, a
 department comparison against the college average and the trend across periods, each with a table.
+
+Reports *(M16)*: `report/` holds a format-free model (`Report` of `Section`s with typed `Column`s) and
+`ReportWriters` (pure): CSV (UTF-8 with BOM; one flat table with the section heading as first column
+when sections share columns, else blocks), Excel (POI streaming `SXSSFWorkbook`, numeric columns as
+numbers) and PDF (OpenPDF, A4 landscape, header row repeated per page, column widths from content,
+footer with page numbers). `allocation/ReportService` builds the reports and
+`GET /api/v1/exam-periods/{id}/reports/{duty-chart|workload|fairness}?format=pdf|xlsx|csv` (exam cell)
+returns them as attachments. Duty chart: published version unless `version` is given, `groupBy`
+date|session|hall|faculty|department, filters `department`, `from`, `to`, `session`, `hall`; open
+positions are listed when grouping by date, session or hall without a department filter. Workload and
+fairness reuse `FairnessService`.
 
 Lifecycle: a DRAFT is freely editable (every edit validated). Publishing freezes it as a version.
 After publishing, assignments change only through controlled workflows (swap, substitute, admin

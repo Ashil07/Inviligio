@@ -237,6 +237,7 @@ repository has no GitHub remote yet (see "Before you start").
 | Allocation | `GET /api/v1/exam-periods/{id}/duty-chart`, `POST .../duty-chart/generate` | admin |
 | My duties (M11) | `GET /api/v1/me/duties`, `GET /api/v1/me/duties.ics` | linked faculty |
 | Department (M12) | `GET /api/v1/department/overview[?periodId=]` | HOD |
+| Reports (M16) | `GET /api/v1/exam-periods/{id}/reports/{duty-chart,workload,fairness}?format=` | admin |
 | Analytics (M15) | `GET /api/v1/analytics/fairness[?periodId=]` | admin |
 | Substitutes (M14) | `GET/POST /api/v1/exam-periods/{id}/duty-chart/assignments/{assignmentId}/substitute` | admin |
 | Swaps (M13) | `GET /api/v1/me/swap-options`, `POST /me/swap-requests[/validate]`, `GET /me/swap-requests`, `POST /swap-requests/{id}/{accept,decline,cancel}`, `GET /swap-requests`, `POST /swap-requests/{id}/{approve,reject}` | faculty / HOD / admin |
@@ -539,4 +540,31 @@ Merged before this: pull requests #1 (leave-form fix) and #2 (M9); CI passed on 
 **Known limits**
 - Per-person figures use today's active faculty, also for older periods.
 - Exam cell only; HODs see their own department on their dashboard (M12).
+
+## M16 Reports: done  (2026-11-10)
+
+**Built** (branch `feat/reports`, no migration; adds OpenPDF and POI to `pom.xml`)
+- `report/`: `Report` model, `ReportFormat` (pdf, xlsx, csv) and `ReportWriters` (pure renderers).
+- `allocation/ReportService` + `ReportController`: duty chart (5 groupings, filters, any version, open
+  positions), workload and fairness reports, as attachments named after the period and grouping.
+- Frontend `features/reports/`: `/admin/reports` ("Reports" in the exam-cell menu): pick the report,
+  period, format, grouping, chart version and filters; the file downloads with the server's name;
+  problem details from a failed download are shown.
+- Fixes found on the way: `useChartVersions` no longer runs without a period; the swap request form,
+  the substitute panel and the reports form no longer leave a failed save as an unhandled promise.
+
+**Verified**
+- Backend: `ReportWritersTest` (5: flat and block CSV with quoting and BOM, Excel title/sections/real
+  numbers, PDF text and footer, column widths) and `ReportIntegrationTest` (3: every grouping and
+  filter incl. the open position and draft versions; PDF and Excel content, workload and fairness;
+  unknown format/grouping/version, faculty 403, other college 404); full suite green.
+- Frontend: 98 tests (5 new); lint, typecheck, build clean.
+- Against the running app with demo data: every report and format downloaded; the PDFs were opened
+  and checked page by page (headings stay with their tables, columns sized to content, open
+  position listed).
+
+**Known limits**
+- Exam cell only; HODs and faculty have their own screens and the faculty calendar file (M11).
+- Remuneration reports belong to M17.
+- PDF uses the built-in Helvetica (Latin-1); names in other scripts would need an embedded font.
 

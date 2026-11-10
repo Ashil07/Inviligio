@@ -8,4 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface AuditRepository extends JpaRepository<AuditEntry, UUID> {
 
     List<AuditEntry> findByEntityTypeAndEntityIdOrderByOccurredAtDesc(String entityType, UUID entityId);
+
+    long countByEntityTypeAndEntityIdAndActionInAndOccurredAtAfter(String entityType, UUID entityId,
+                                                                    java.util.Collection<String> actions, java.time.Instant after);
 }

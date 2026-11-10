@@ -277,6 +277,15 @@ public class SwapService {
         return view(swap);
     }
 
+    /** Open swaps offering or asking for this duty can no longer happen once it changed hands. */
+    void invalidateOpenFor(DutyAssignment duty, String why) {
+        for (SwapRequest swap : swaps.findTouching(duty.getId(), SwapRequest.OPEN)) {
+            swap.invalidate(why);
+            swaps.flush();
+            audit.record("SWAP_INVALIDATED", ENTITY, swap.getId(), null, view(swap), why);
+        }
+    }
+
     // ---- applying ----
 
     /**

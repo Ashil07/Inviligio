@@ -146,7 +146,8 @@ method) and `explainOpen` (the unfilled-position funnel for a vacant seat). Edit
 the policy version the chart was generated with. Swaps (M13) use it too: `SwapService` loads the
 chart as it would be after the swap and keeps only the violations of the moved duties, so an
 unrelated problem elsewhere does not block a swap; soft-cost notes come from `check`. Substitutes
-(M14) should use `ChartChecker` the same way.
+(M14) use `alternatives` for the ranked list (with the absent person's seat as `replacing`) and
+`check` for the final decision, so all four consumers share one rule set.
 
 Each constraint returns a structured result (`code`, `severity`, message params), e.g.
 `OVERLAPPING_DUTY {otherHall: "H-204", session: "12 Nov FN"}`. Messages are rendered in the UI from

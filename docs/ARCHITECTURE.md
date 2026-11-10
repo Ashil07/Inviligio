@@ -353,6 +353,17 @@ editor's workload warning; the average is the chart's non-cancelled duties over 
 faculty. A period with no published chart (or another college's) is `PUBLISHED_CHART_NOT_FOUND` 404.
 Pending leave comes from the existing `GET /api/v1/availability?status=PENDING` (already HOD-scoped).
 
+Fairness analytics *(M15, `allocation/FairnessService`)*: `GET /api/v1/analytics/fairness[?periodId=]`
+(exam cell) from PUBLISHED charts only (swaps and substitutes included, cancelled duties excluded):
+the periods with a published chart (latest by start date by default), a summary (positions, filled,
+unfilled, mean/min/max/std-dev of duties per person, over/under, active faculty without a duty),
+per-faculty rows (duties, chief duties, even share, `load` via `ChartChecker.load`, duties across all
+published periods), per-department rows, the history of every published period (oldest first) and
+the open positions with their exclusion counts. Per-person figures are over the college's active
+faculty now (as in the chart statistics); for older periods this is an approximation. The frontend
+page `/admin/analytics` (Recharts, loaded on demand) shows a distribution chart with the average, a
+department comparison against the college average and the trend across periods, each with a table.
+
 Lifecycle: a DRAFT is freely editable (every edit validated). Publishing freezes it as a version.
 After publishing, assignments change only through controlled workflows (swap, substitute, admin
 reassignment) — each runs the same validator and writes `audit_log`. A larger rework goes through a

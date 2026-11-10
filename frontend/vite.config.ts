@@ -21,5 +21,8 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
     css: false,
+    // Form tests type with user-event and take a few seconds each; with many files in parallel on
+    // a busy machine they can pass the default 5 s, so allow more. Real failures still fail.
+    testTimeout: 15_000,
   },
 })

@@ -70,6 +70,8 @@ export const routes: RouteObject[] = [
                       { path: '/admin/import', element: <ImportPage /> },
                       { path: '/admin/availability', element: <AdminAvailabilityPage /> },
                       { path: '/admin/swaps', element: <AdminSwapsPage /> },
+                      // Loaded on demand: the charts library is large and only this page needs it.
+                      { path: '/admin/analytics', lazy: async () => ({ Component: (await import('@/features/analytics/FairnessPage')).FairnessPage }) },
                       { path: '/admin/settings/college', element: <CollegeSettingsPage /> },
                       { path: '/admin/settings/policy', element: <PolicySettingsPage /> },
                       { path: '/admin/settings/policy/versions/:version', element: <PolicyVersionPage /> },

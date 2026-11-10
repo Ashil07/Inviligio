@@ -20,6 +20,8 @@ export interface Duty {
   source: 'AUTO' | 'MANUAL' | 'SWAP' | 'SUBSTITUTE'
   explanation: Explanation | null
   version: number
+  /** ABSENT: marked absent after the session, so not paid. */
+  status: 'ASSIGNED' | 'COMPLETED' | 'ABSENT' | 'CANCELLED'
 }
 
 export interface ChartHall {
@@ -326,6 +328,26 @@ export function useSubstitute(periodId: string) {
       await queryClient.invalidateQueries({ queryKey: key(periodId) })
     },
   })
+}
+
+/** Marks a duty of the published chart absent (not paid) or present again, after its session. */
+export function useMarkAttendance(periodId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ assignmentId, ...body }: { assignmentId: string; absent: boolean; version: number; reason?: string }) =>
+      (await api.put<DutyChart>(`/exam-periods/${periodId}/duty-chart/assignments/${assignmentId}/attendance`, body)).data,
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: key(periodId) }),
+        queryClient.invalidateQueries({ queryKey: ['remuneration'] }),
+      ])
+    },
+  })
+}
+
+/** True once the session's end time has passed (browser clock; the server checks with the college's). */
+export function sessionEnded(s: Pick<ChartSession, 'date' | 'endTime'>, now: Date = new Date()): boolean {
+  return new Date(`${s.date}T${s.endTime}`) <= now
 }
 
 export function explain(d: Duty): string {

@@ -45,6 +45,7 @@ function chart(overrides: Partial<DutyChart> = {}): DutyChart {
                 departmentCode: 'ECE',
                 role: 'INVIGILATOR',
                 source: 'AUTO',
+                status: 'ASSIGNED',
                 explanation: { eligibleCandidates: 4, dutiesBefore: 0, penalties: ['invigilates an exam of their own department'] },
                 version: 3,
               },
@@ -357,6 +358,31 @@ describe('AllocationPage', () => {
       )
       expect(await screen.findByText(/Meera Nair now has the duty of Ravi Kumar/)).toBeInTheDocument()
       expect(screen.queryByRole('region', { name: 'Substitute for Ravi Kumar' })).not.toBeInTheDocument()
+    })
+
+    it('marks someone absent after their session and back again', async () => {
+      const past = chart({ status: 'PUBLISHED', publishedAt: '2026-01-04T09:00:00Z' })
+      past.sessions = past.sessions.map((s) => ({ ...s, date: '2026-01-05' }))
+      vi.spyOn(api, 'get').mockImplementation(async (url: string) => {
+        if (url === '/exam-periods/p1') return { data: period }
+        if (url === '/exam-periods/p1/duty-chart') return { data: past }
+        if (url === '/exam-periods/p1/duty-chart/history' || url === '/exam-periods/p1/duty-chart/versions') return { data: [] }
+        if (url === '/policy') return { data: { version: 1, saved: true, settings: { swaps: { swapsEnabled: true, recipientMustAccept: true, hodApprovalRequired: false, adminCanReassignDirectly: true } } } }
+        throw new Error(url)
+      })
+      vi.spyOn(window, 'confirm').mockReturnValue(true)
+      const put = vi.spyOn(api, 'put').mockResolvedValue({ data: past })
+      renderRoutes(routes, { path: '/admin/exams/p1/allocation', auth: admin() })
+
+      // The session is over: no substitutes any more, but attendance can be marked.
+      await userEvent.click(await screen.findByRole('button', { name: 'Mark absent: Ravi Kumar in H1' }))
+      expect(screen.queryByRole('button', { name: /Substitute for/ })).not.toBeInTheDocument()
+
+      expect(window.confirm).toHaveBeenCalledWith(expect.stringMatching(/will not be paid/))
+      await waitFor(() =>
+        expect(put).toHaveBeenCalledWith('/exam-periods/p1/duty-chart/assignments/a1/attendance', { absent: true, version: 3 }),
+      )
+      expect(await screen.findByText('Ravi Kumar is marked absent.')).toBeInTheDocument()
     })
 
     it('offers no substitutes when the policy does not allow direct reassignment', async () => {

@@ -22,6 +22,7 @@ import { SystemStatusPage } from '@/features/system/SystemStatusPage'
 import { AdminLayout, AdminPage } from './AdminLayout'
 import { AppLayout } from './AppLayout'
 import { AreaLayout } from './AreaLayout'
+import { RemunerationPage } from '@/features/remuneration/RemunerationPage'
 import { ReportsPage } from '@/features/reports/ReportsPage'
 import { AdminSwapsPage, FacultySwapsPage, HodSwapsPage } from '@/features/swaps/SwapPages'
 import { AdminHomePage, FacultyHomePage, HodHomePage } from './RoleHomePages'
@@ -72,6 +73,7 @@ export const routes: RouteObject[] = [
                       { path: '/admin/availability', element: <AdminAvailabilityPage /> },
                       { path: '/admin/swaps', element: <AdminSwapsPage /> },
                       { path: '/admin/reports', element: <ReportsPage /> },
+                      { path: '/admin/remuneration', element: <RemunerationPage /> },
                       // Loaded on demand: the charts library is large and only this page needs it.
                       { path: '/admin/analytics', lazy: async () => ({ Component: (await import('@/features/analytics/FairnessPage')).FairnessPage }) },
                       { path: '/admin/settings/college', element: <CollegeSettingsPage /> },

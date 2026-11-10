@@ -22,6 +22,7 @@ export function AdminLayout() {
           { to: '/admin/swaps', label: 'Swaps', end: false },
           { to: '/admin/analytics', label: 'Fairness', end: false },
           { to: '/admin/reports', label: 'Reports', end: false },
+          { to: '/admin/remuneration', label: 'Remuneration', end: false },
           { to: '/admin/settings/college', label: 'College', end: false },
           { to: '/admin/settings/policy', label: 'Policy', end: false },
         ]

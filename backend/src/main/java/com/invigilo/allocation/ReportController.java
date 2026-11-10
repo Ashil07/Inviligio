@@ -51,6 +51,12 @@ public class ReportController {
         return download(reports.workload(periodId, blank(department), ReportFormat.parse(format)));
     }
 
+    @GetMapping("/remuneration")
+    public ResponseEntity<byte[]> remuneration(@PathVariable UUID periodId, @RequestParam(required = false) String format,
+                                               @RequestParam(required = false) String department) {
+        return download(reports.remuneration(periodId, blank(department), ReportFormat.parse(format)));
+    }
+
     @GetMapping("/fairness")
     public ResponseEntity<byte[]> fairness(@PathVariable UUID periodId, @RequestParam(required = false) String format) {
         return download(reports.fairness(periodId, ReportFormat.parse(format)));

@@ -84,6 +84,11 @@ public class DutyAssignment extends TenantScopedEntity {
         this.explanation = null;
     }
 
+    /** Attendance after the session (M17): an absent duty is not paid. */
+    void markAbsent(boolean absent) {
+        this.status = absent ? Status.ABSENT : Status.ASSIGNED;
+    }
+
     /** Gives this duty to a substitute chosen by the exam cell (published chart). */
     void substitute(Faculty to) {
         this.faculty = to;

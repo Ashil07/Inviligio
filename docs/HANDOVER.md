@@ -237,12 +237,13 @@ repository has no GitHub remote yet (see "Before you start").
 | Allocation | `GET /api/v1/exam-periods/{id}/duty-chart`, `POST .../duty-chart/generate` | admin |
 | My duties (M11) | `GET /api/v1/me/duties`, `GET /api/v1/me/duties.ics` | linked faculty |
 | Department (M12) | `GET /api/v1/department/overview[?periodId=]` | HOD |
+| Remuneration (M17) | `GET/POST /api/v1/remuneration/rates`, `DELETE /remuneration/rates/{id}`, `GET /remuneration`, `PUT /exam-periods/{id}/duty-chart/assignments/{assignmentId}/attendance`, `GET .../reports/remuneration` | admin |
 | Reports (M16) | `GET /api/v1/exam-periods/{id}/reports/{duty-chart,workload,fairness}?format=` | admin |
 | Analytics (M15) | `GET /api/v1/analytics/fairness[?periodId=]` | admin |
 | Substitutes (M14) | `GET/POST /api/v1/exam-periods/{id}/duty-chart/assignments/{assignmentId}/substitute` | admin |
 | Swaps (M13) | `GET /api/v1/me/swap-options`, `POST /me/swap-requests[/validate]`, `GET /me/swap-requests`, `POST /swap-requests/{id}/{accept,decline,cancel}`, `GET /swap-requests`, `POST /swap-requests/{id}/{approve,reject}` | faculty / HOD / admin |
 
-**Database migrations:** V1-V9 (latest `V9__duty_swaps`). All tables in schema `invigilo`, every
+**Database migrations:** V1-V10 (latest `V10__remuneration`). All tables in schema `invigilo`, every
 tenant table has `college_id` and composite same-college foreign keys.
 
 **Policy settings implemented:** all of ALLOCATION_ENGINE.md §3 are stored, validated and editable,
@@ -567,4 +568,36 @@ Merged before this: pull requests #1 (leave-form fix) and #2 (M9); CI passed on 
 - Exam cell only; HODs and faculty have their own screens and the faculty calendar file (M11).
 - Remuneration reports belong to M17.
 - PDF uses the built-in Helvetica (Latin-1); names in other scripts would need an embedded font.
+
+## M17 Remuneration: done  (2026-11-10)
+
+**Built** (branch `feat/remuneration`, migration `V10__remuneration`)
+- Backend: `RemunerationRate` (+ repository), `RemunerationService`, `RemunerationController`.
+  Rates per role from an effective date (one currency per college, default INR; add and delete with
+  version, audited). Pay computed from the published chart: paid once the session has ended unless
+  ABSENT; duties without a rate on their date are counted, not priced. Attendance endpoint marks a
+  published duty absent or present again after its session (audited, shown in the chart history,
+  counted in `changesNotInDraft`). `ChartView` duties now carry `status`. Remuneration report in
+  `ReportService` (faculty, departments, total, rates; department filter).
+- Frontend: `/admin/remuneration` ("Remuneration" in the exam-cell menu): rates table with add/delete,
+  period picker, totals, faculty and department pay, PDF/Excel/CSV downloads, a warning for duties
+  without a rate. On the published chart: "Mark absent" / "Mark present" once a session is over (and
+  no "Substitute" any more), an "absent" badge. "Remuneration" is also on the Reports page.
+
+**Verified**
+- Backend: `RemunerationIntegrationTest` (3: rate of the day incl. a later rate not applied, absent and
+  present again with history, deleting a rate leaves duties unpriced, future exam not paid; duplicate,
+  negative, three-decimal and other-currency rates refused, stale delete, attendance before the end
+  and unchanged attendance refused, faculty 403, other college sees nothing and gets 404; the CSV
+  report); full suite 189 green.
+- Frontend: 103 tests (5 new); lint, typecheck, build clean.
+- Against the running app with demo data (API): two rates added (invigilator 500, chief 750 from
+  1 Jan 2026; delete them on the page if not wanted); the demo exams are still ahead, so all 81 duties
+  are "still to come" and nothing is paid yet; early attendance is refused; the remuneration PDF was
+  opened and checked. The page itself was not clicked through (no exam-cell sign-in for the assistant).
+
+**Known limits**
+- One rate per role; no exam-type or session-type rates.
+- No faculty view of their own pay yet; HODs do not see pay.
+- Attendance is only "absent" or not; no partial duties or COMPLETED marking.
 

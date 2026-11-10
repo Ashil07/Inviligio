@@ -22,6 +22,7 @@ import { SystemStatusPage } from '@/features/system/SystemStatusPage'
 import { AdminLayout, AdminPage } from './AdminLayout'
 import { AppLayout } from './AppLayout'
 import { AreaLayout } from './AreaLayout'
+import { AdminSwapsPage, FacultySwapsPage, HodSwapsPage } from '@/features/swaps/SwapPages'
 import { AdminHomePage, FacultyHomePage, HodHomePage } from './RoleHomePages'
 
 /**
@@ -68,6 +69,7 @@ export const routes: RouteObject[] = [
                       { path: '/admin/faculty/:id', element: <FacultyDetailPage /> },
                       { path: '/admin/import', element: <ImportPage /> },
                       { path: '/admin/availability', element: <AdminAvailabilityPage /> },
+                      { path: '/admin/swaps', element: <AdminSwapsPage /> },
                       { path: '/admin/settings/college', element: <CollegeSettingsPage /> },
                       { path: '/admin/settings/policy', element: <PolicySettingsPage /> },
                       { path: '/admin/settings/policy/versions/:version', element: <PolicyVersionPage /> },
@@ -81,10 +83,11 @@ export const routes: RouteObject[] = [
             element: <RequireRole role="HOD" />,
             children: [
               {
-                element: <AreaLayout label="Department" links={[{ to: '/hod', label: 'Overview', end: true }, { to: '/hod/requests', label: 'Leave requests' }]} />,
+                element: <AreaLayout label="Department" links={[{ to: '/hod', label: 'Overview', end: true }, { to: '/hod/requests', label: 'Leave requests' }, { to: '/hod/swaps', label: 'Swap requests' }]} />,
                 children: [
                   { path: '/hod', element: <HodHomePage /> },
                   { path: '/hod/requests', element: <DepartmentRequestsPage /> },
+                  { path: '/hod/swaps', element: <HodSwapsPage /> },
                 ],
               },
             ],
@@ -93,10 +96,11 @@ export const routes: RouteObject[] = [
             element: <RequireRole role="FACULTY" />,
             children: [
               {
-                element: <AreaLayout label="Faculty" links={[{ to: '/faculty', label: 'My duties', end: true }, { to: '/faculty/availability', label: 'My availability' }]} />,
+                element: <AreaLayout label="Faculty" links={[{ to: '/faculty', label: 'My duties', end: true }, { to: '/faculty/availability', label: 'My availability' }, { to: '/faculty/swaps', label: 'Swaps' }]} />,
                 children: [
                   { path: '/faculty', element: <FacultyHomePage /> },
                   { path: '/faculty/availability', element: <MyAvailabilityPage /> },
+                  { path: '/faculty/swaps', element: <FacultySwapsPage /> },
                 ],
               },
             ],

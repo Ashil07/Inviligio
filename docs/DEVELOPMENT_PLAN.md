@@ -82,7 +82,7 @@ admin page, then start M9.
 | M10 | Review & publish | **Done.** Review screen; publish blocked by hard errors; immutable versions; supersede flow; audit history. |
 | M11 | Faculty dashboard | **Done.** Upcoming/past duties, calendar, availability requests, own schedule download (.ics). |
 | M12 | HOD dashboard | **Done.** Department faculty, duties and workload (over/under, engine rule) per published chart; pending leave. Swap approvals land with M13. |
-| M13 | Duty swaps | Request → recipient accept → optional HOD → transactional revalidated swap → audit. |
+| M13 | Duty swaps | **Done.** Handover or exchange; colleague accepts, optional HOD approval; applied under a chart lock after re-checking with `ChartChecker` (else INVALIDATED); audited; publish warns when a draft lacks swaps. |
 | M14 | Emergency substitutes | Ranked eligible candidates with reasons; admin selects; audited reassignment. |
 | M15 | Fairness analytics | From real `duty_assignment` data: per-faculty totals, mean/min/max/std-dev, department comparison, history, unfilled. Recharts. |
 | M16 | Reports | PDF (OpenPDF), Excel (POI, streaming), CSV: full, faculty-, hall-, department-, date-, session-wise charts; workload, fairness, remuneration; filters. |

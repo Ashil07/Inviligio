@@ -10,8 +10,6 @@ import com.invigilo.exam.ExamPeriodService.PeriodView;
 import com.invigilo.exam.ExamSession;
 import com.invigilo.faculty.Faculty;
 import com.invigilo.faculty.FacultyService;
-import com.invigilo.identity.CollegeMembership;
-import com.invigilo.identity.CollegeMembershipRepository;
 import com.invigilo.tenant.CurrentUser;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -65,21 +63,21 @@ public class DepartmentDashboardService {
     private final DutyAssignmentRepository assignments;
     private final ExamPeriodService periods;
     private final FacultyService faculty;
-    private final CollegeMembershipRepository memberships;
+    private final OwnFaculty ownFaculty;
 
-    public DepartmentDashboardService(DutyChartRepository charts, DutyAssignmentRepository assignments, ExamPeriodService periods,
-                                      FacultyService faculty, CollegeMembershipRepository memberships) {
+    DepartmentDashboardService(DutyChartRepository charts, DutyAssignmentRepository assignments, ExamPeriodService periods,
+                               FacultyService faculty, OwnFaculty ownFaculty) {
         this.charts = charts;
         this.assignments = assignments;
         this.periods = periods;
         this.faculty = faculty;
-        this.memberships = memberships;
+        this.ownFaculty = ownFaculty;
     }
 
     /** {@code periodId} null picks the published period that starts last. */
     @Transactional(readOnly = true)
     public Overview overview(CurrentUser user, UUID periodId) {
-        Department department = requireHodDepartment(user);
+        Department department = ownFaculty.requireHodDepartment(user);
         DepartmentRef ref = new DepartmentRef(department.getId(), department.getCode(), department.getName());
         List<Faculty> people = faculty.inDepartment(department.getId());
 
@@ -152,15 +150,6 @@ public class DepartmentDashboardService {
         return new DepartmentDuty(a.getId(), s.getSessionDate(), s.getLabel(), s.getStartTime(), s.getEndTime(),
                 a.getSessionHall().getHall().getCode(), a.getSessionHall().getHall().getName(), f.getId(), f.getEmployeeCode(),
                 f.getFullName(), a.getRole());
-    }
-
-    /** A HOD's department is the department of their own faculty record. */
-    private Department requireHodDepartment(CurrentUser user) {
-        UUID facultyId = memberships.findById(user.membershipId()).map(CollegeMembership::getFacultyId).orElse(null);
-        if (facultyId == null) {
-            throw ApiException.forbidden("NO_DEPARTMENT_SCOPE", "Only a head of department linked to a faculty record has a department");
-        }
-        return faculty.find(facultyId).getDepartment();
     }
 
     private static double round1(double v) {

@@ -84,6 +84,13 @@ public class DutyAssignment extends TenantScopedEntity {
         this.explanation = null;
     }
 
+    /** Gives this duty to the other side of an approved swap. */
+    void swapTo(Faculty to) {
+        this.faculty = to;
+        this.source = Source.SWAP;
+        this.explanation = null;
+    }
+
     public UUID getChartId() { return chartId; }
     public SessionHall getSessionHall() { return sessionHall; }
     public Faculty getFaculty() { return faculty; }

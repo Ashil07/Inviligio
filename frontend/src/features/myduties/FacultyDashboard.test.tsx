@@ -73,6 +73,9 @@ describe('FacultyDashboard', () => {
     expect(screen.getByRole('grid', { name: /February 2027/ })).toBeInTheDocument()
     expect(screen.getByRole('gridcell', { name: '2027-02-20: FN H102' })).toBeInTheDocument()
 
+    // Each upcoming duty can be offered for a swap.
+    expect(screen.getAllByRole('link', { name: /^Swap the duty on/ })).toHaveLength(2)
+    expect(screen.getAllByRole('link', { name: /^Swap the duty on/ })[0]).toHaveAttribute('href', '/faculty/swaps?duty=a1')
     expect(screen.getByText('Chief invigilator')).toBeInTheDocument()
     expect(screen.getByText('H102 · Main Block 102, Main Block')).toBeInTheDocument()
     expect(await screen.findByText(/1 request is waiting for a decision/)).toBeInTheDocument()

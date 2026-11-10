@@ -4,8 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.http.HttpMethod.GET;
 import static org.springframework.http.HttpMethod.POST;
 
-import com.invigilo.support.TestData;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -28,11 +26,6 @@ class DepartmentDashboardIntegrationTest extends ChartScenario {
 
     static List<Map<String, Object>> list(Map<String, Object> body, String name) {
         return (List<Map<String, Object>>) body.get(name);
-    }
-
-    void publishCurrentDraft() {
-        long version = ((Number) chart().get("version")).longValue();
-        assertThat(send(POST, base + "/publish", Map.of("version", version)).getStatusCode()).isEqualTo(HttpStatus.OK);
     }
 
     @Test
@@ -98,17 +91,7 @@ class DepartmentDashboardIntegrationTest extends ChartScenario {
         generate();
         publishCurrentDraft();
 
-        TestData.Registered other = data().registerCollege();
-        String dept = id(data().send(POST, "/api/v1/departments", other.accessToken(),
-                Map.of("code", "MECH", "name", "Mechanical", "active", true), Map.class));
-        Map<String, Object> body = new HashMap<>(Map.of("employeeCode", "M1", "fullName", "Other Head", "departmentId", dept,
-                "employmentType", "REGULAR", "chiefEligible", true, "dutyWeight", 1, "active", true));
-        body.put("email", "m1." + TestData.unique().toLowerCase() + "@other.example.test");
-        String facultyId = id(data().send(POST, "/api/v1/faculty", other.accessToken(), body, Map.class));
-        String invitation = (String) data().send(POST, "/api/v1/faculty/" + facultyId + "/access/invitation", other.accessToken(),
-                Map.of("roles", List.of("HOD")), Map.class).getBody().get("token");
-        String otherHod = (String) http.postForEntity("/api/v1/auth/invitations/accept",
-                TestData.json(Map.of("token", invitation, "password", "faculty-password")), Map.class).getBody().get("accessToken");
+        String otherHod = loginAtAnotherCollege(List.of("HOD"));
 
         assertThat(overview(otherHod, "?periodId=" + period).getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
         Map<String, Object> own = ok(otherHod, "");

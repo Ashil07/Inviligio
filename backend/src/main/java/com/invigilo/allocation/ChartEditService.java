@@ -344,6 +344,10 @@ public class ChartEditService {
             case "DUTY_REMOVED" -> "Removed " + who.apply(before) + " " + where.apply(before).replaceFirst("^as (.+?) in ", "from ")
                     + " (" + ("CHIEF".equals(before.path("role").asText()) ? "chief invigilator" : "invigilator")
                     + "); the position is open";
+            case "DUTY_HANDED_OVER" -> "Swap: " + who.apply(before.path(0)) + " handed over their duty "
+                    + where.apply(before.path(0)) + " to " + who.apply(after.path(0));
+            case "DUTY_SWAPPED" -> "Swap: " + who.apply(after.path(0)) + " now " + where.apply(after.path(0)) + "; "
+                    + who.apply(after.path(1)) + " now " + where.apply(after.path(1));
             case "DUTY_CHART_PUBLISHED" -> "Published version " + after.path("chartVersion").asInt()
                     + (after.hasNonNull("supersededVersion") ? ", replacing version " + after.path("supersededVersion").asInt() : "")
                     + ": " + after.path("filled").asInt() + " of " + after.path("positions").asInt() + " positions filled";

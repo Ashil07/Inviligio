@@ -24,11 +24,6 @@ class MyDutiesIntegrationTest extends ChartScenario {
         return (List<Map<String, Object>>) mine.get("upcoming");
     }
 
-    void publishCurrentDraft() {
-        long version = ((Number) chart().get("version")).longValue();
-        assertThat(send(POST, base + "/publish", Map.of("version", version)).getStatusCode()).isEqualTo(HttpStatus.OK);
-    }
-
     /** The code of someone with a duty in FN H1, and of their colleague there. */
     static String[] pairInMorningH1(Map<String, Object> chart) {
         var h1 = duties(chart, "FN", "H1");

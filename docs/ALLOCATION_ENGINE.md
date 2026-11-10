@@ -143,8 +143,10 @@ weight-adjusted average; the rule is the public `ChartChecker.load`, which the H
 uses for over/under), `alternatives` (legal candidates by cost; no look-ahead term),
 `violations` (every loaded duty against the rest; the generator's final validation uses the same
 method) and `explainOpen` (the unfilled-position funnel for a vacant seat). Edits are judged with
-the policy version the chart was generated with. Swaps (M13) and substitutes (M14) should use
-`ChartChecker` too.
+the policy version the chart was generated with. Swaps (M13) use it too: `SwapService` loads the
+chart as it would be after the swap and keeps only the violations of the moved duties, so an
+unrelated problem elsewhere does not block a swap; soft-cost notes come from `check`. Substitutes
+(M14) should use `ChartChecker` the same way.
 
 Each constraint returns a structured result (`code`, `severity`, message params), e.g.
 `OVERLAPPING_DUTY {otherHall: "H-204", session: "12 Nov FN"}`. Messages are rendered in the UI from

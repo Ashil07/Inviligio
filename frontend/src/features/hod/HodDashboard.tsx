@@ -7,6 +7,7 @@ import { Table } from '@/components/ui/layout'
 import { FullPageSpinner } from '@/components/ui/Spinner'
 import { describeWhen, useAvailabilityList } from '@/features/availability/api'
 import { formatDate, hhmm } from '@/features/schedule/api'
+import { useSwapList } from '@/features/swaps/api'
 import { toApiProblem } from '@/lib/api/client'
 import { formatDateTime } from '@/lib/forms'
 import { useDepartmentOverview, type DepartmentDuty, type MemberRow } from './api'
@@ -83,6 +84,7 @@ export function HodDashboard() {
       )}
 
       <PendingLeave />
+      <PendingSwaps />
 
       <Section
         title="Workload"
@@ -186,5 +188,19 @@ function PendingLeave() {
         </div>
       )}
     </Section>
+  )
+}
+
+function PendingSwaps() {
+  const swaps = useSwapList('PENDING_HOD')
+  const count = swaps.data?.length ?? 0
+  if (!swaps.data || count === 0) return null
+  return (
+    <p className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+      {count === 1 ? '1 swap is' : `${count} swaps are`} waiting for your approval.{' '}
+      <Link to="/hod/swaps" className="font-medium text-indigo-700 hover:underline">
+        Review swap requests
+      </Link>
+    </p>
   )
 }

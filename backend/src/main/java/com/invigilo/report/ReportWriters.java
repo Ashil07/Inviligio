@@ -60,14 +60,14 @@ public final class ReportWriters {
             }
             for (Section s : report.sections()) {
                 if (!flat) {
-                    csv.printRecord(s.heading() == null ? report.title() : s.heading());
+                    csv.printRecord(safe(s.heading() == null ? report.title() : s.heading()));
                     csv.printRecord(s.columns().stream().map(Column::name).toList());
                 }
                 for (List<String> row : s.rows()) {
                     List<String> values = new ArrayList<>();
                     if (groupColumn) values.add(s.heading() == null ? "" : s.heading());
                     values.addAll(row);
-                    csv.printRecord(values);
+                    csv.printRecord(values.stream().map(ReportWriters::safe).toList());
                 }
                 if (!flat) csv.println();
             }
@@ -77,13 +77,25 @@ public final class ReportWriters {
         return out.toByteArray();
     }
 
+    /**
+     * Neutralises spreadsheet formulas (CSV injection): names are typed by users, and a value such as
+     * {@code =HYPERLINK(...)} would run when the file is opened in Excel. Such values get a leading
+     * apostrophe; plain negative numbers are left alone.
+     */
+    static String safe(String value) {
+        if (value == null || value.isEmpty()) return value == null ? "" : value;
+        char first = value.charAt(0);
+        boolean risky = first == '=' || first == '+' || first == '@' || first == '\t' || first == '\r'
+                || (first == '-' && !value.matches("-\\d+(\\.\\d+)?"));
+        return risky ? "'" + value : value;
+    }
+
     // ---- Excel ----
 
     /** One sheet: title and details, then each section with a bold heading and header row. */
     static byte[] xlsx(Report report) {
         try (SXSSFWorkbook book = new SXSSFWorkbook(200); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             SXSSFSheet sheet = book.createSheet("Report");
-            sheet.trackAllColumnsForAutoSizing();
             org.apache.poi.ss.usermodel.Font bold = book.createFont();
             bold.setBold(true);
             org.apache.poi.ss.usermodel.Font titleFont = book.createFont();
@@ -102,13 +114,17 @@ public final class ReportWriters {
             int r = 0;
             cell(sheet.createRow(r++), 0, report.title(), title);
             for (String line : report.details()) cell(sheet.createRow(r++), 0, line, null);
-            int widest = 1;
+            // Column widths from the text (POI's autoSizeColumn is slow on large sheets).
+            int[] chars = new int[report.sections().stream().mapToInt(s -> s.columns().size()).max().orElse(1)];
             for (Section s : report.sections()) {
                 r++;
                 if (s.heading() != null) cell(sheet.createRow(r++), 0, s.heading(), heading);
                 Row head = sheet.createRow(r++);
-                for (int c = 0; c < s.columns().size(); c++) cell(head, c, s.columns().get(c).name(), header);
-                widest = Math.max(widest, s.columns().size());
+                float[] widths = columnWidths(s);
+                for (int c = 0; c < s.columns().size(); c++) {
+                    cell(head, c, s.columns().get(c).name(), header);
+                    chars[c] = Math.max(chars[c], (int) widths[c]);
+                }
                 for (List<String> values : s.rows()) {
                     Row row = sheet.createRow(r++);
                     for (int c = 0; c < values.size(); c++) {
@@ -121,10 +137,7 @@ public final class ReportWriters {
                     }
                 }
             }
-            for (int c = 0; c < widest; c++) {
-                sheet.autoSizeColumn(c);
-                sheet.setColumnWidth(c, Math.min(sheet.getColumnWidth(c) + 512, 60 * 256));
-            }
+            for (int c = 0; c < chars.length; c++) sheet.setColumnWidth(c, Math.min(chars[c] + 3, 60) * 256);
             book.write(out);
             book.dispose();
             return out.toByteArray();

@@ -29,6 +29,11 @@ spring:
         default_schema: invigilo
         jdbc:
           time_zone: UTC
+          # Send inserts/updates in batches: a generated chart writes ~1,000+ rows, and against a remote
+          # database (Supabase) one round trip per row is what costs time.
+          batch_size: 50
+        order_inserts: true
+        order_updates: true
 
   flyway:
     # All tables live in the dedicated "invigilo" schema, NOT "public".
@@ -62,9 +67,13 @@ management:
       show-details: never
 
 springdoc:
+  # The API description and Swagger UI are handy in development; switch them off in production
+  # with API_DOCS_ENABLED=false (see docs/DEPLOYMENT.md).
   api-docs:
+    enabled: ${API_DOCS_ENABLED:true}
     path: /v3/api-docs
   swagger-ui:
+    enabled: ${API_DOCS_ENABLED:true}
     path: /swagger-ui.html
 
 invigilo:

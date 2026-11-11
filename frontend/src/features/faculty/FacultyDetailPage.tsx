@@ -36,15 +36,15 @@ export function FacultyDetailPage() {
   return (
     <div className="space-y-6">
       <div>
-        <Link to="/admin/faculty" className="text-sm text-indigo-700 hover:underline">
+        <Link to="/admin/faculty" className="text-sm link">
           ← All faculty
         </Link>
         <div className="mt-2 flex flex-wrap items-center gap-3">
-          <h1 className="text-2xl font-semibold text-slate-900">{faculty ? faculty.fullName : 'New faculty member'}</h1>
+          <h1 className="text-2xl font-bold text-neutral-900 sm:text-3xl">{faculty ? faculty.fullName : 'New faculty member'}</h1>
           {faculty && <StatusBadge active={faculty.active} />}
         </div>
         {faculty && (
-          <p className="mt-1 text-sm text-slate-600">
+          <p className="mt-1 text-sm text-neutral-600">
             {faculty.employeeCode} · {faculty.department.code}
           </p>
         )}
@@ -61,11 +61,11 @@ export function FacultyDetailPage() {
         <>
           <RestrictionsSection faculty={faculty} />
           <AccessSection faculty={faculty} />
-          <div className="border-t border-slate-200 pt-4">
+          <div className="border-t border-neutral-200 pt-4">
             <Button type="button" variant="secondary" onClick={() => void handleDelete()} className="text-red-700">
               Delete faculty member
             </Button>
-            <p className="mt-1 text-xs text-slate-500">Only possible before they have a login. Otherwise mark them inactive.</p>
+            <p className="mt-1 text-xs text-neutral-500">Only possible before they have a login. Otherwise mark them inactive.</p>
           </div>
         </>
       )}

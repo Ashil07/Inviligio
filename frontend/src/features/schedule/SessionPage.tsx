@@ -43,13 +43,13 @@ export function SessionPage() {
 
   return (
     <div className="space-y-6">
-      <Link to={`/admin/exams/${s.periodId}`} className="text-sm text-indigo-700 hover:underline">← {s.periodName}</Link>
+      <Link to={`/admin/exams/${s.periodId}`} className="text-sm link">← {s.periodName}</Link>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">
+          <h1 className="text-2xl font-bold text-neutral-900 sm:text-3xl">
             {formatDate(s.date)} · {s.label}
           </h1>
-          <p className="mt-1 text-sm text-slate-600">
+          <p className="mt-1 text-sm text-neutral-600">
             {hhmm(s.startTime)}-{hhmm(s.endTime)} · {s.totalStudents} students seated · {s.totalPositions} invigilator positions
           </p>
         </div>
@@ -134,11 +134,11 @@ function ExamsSection({ session, mutations, run }: { session: SessionDetail; mut
       <Table head={['Subject', 'Department', 'Type', 'Registered', 'Seated', '']} empty={session.exams.length === 0 && 'No exams yet.'}>
         {session.exams.map((e) => (
           <tr key={e.id}>
-            <td className="px-4 py-2"><span className="font-medium text-slate-900">{e.subject.code}</span> <span className="text-slate-600">{e.subject.name}</span></td>
-            <td className="px-4 py-2 text-slate-600">{e.department.code}</td>
-            <td className="px-4 py-2 text-slate-600">{e.type === 'PRACTICAL' ? 'Practical' : 'Theory'}</td>
-            <td className="px-4 py-2 text-slate-600">{e.registeredStudents ?? '-'}</td>
-            <td className="px-4 py-2 text-slate-600">{e.seatedStudents}</td>
+            <td className="px-4 py-2"><span className="font-medium text-neutral-900">{e.subject.code}</span> <span className="text-neutral-600">{e.subject.name}</span></td>
+            <td className="px-4 py-2 text-neutral-600">{e.department.code}</td>
+            <td className="px-4 py-2 text-neutral-600">{e.type === 'PRACTICAL' ? 'Practical' : 'Theory'}</td>
+            <td className="px-4 py-2 text-neutral-600">{e.registeredStudents ?? '-'}</td>
+            <td className="px-4 py-2 text-neutral-600">{e.seatedStudents}</td>
             <td className="px-4 py-2 text-right">
               <button
                 type="button"
@@ -181,17 +181,17 @@ function HallsSection({ session, mutations, run }: { session: SessionDetail; mut
   const [editing, setEditing] = useState<SessionHallView | 'new' | null>(null)
   return (
     <Section title="Halls and seating" description="Each hall used in this session, how many students of each exam sit there, and the invigilators it needs.">
-      {session.halls.length === 0 && <p className="text-sm text-slate-500">No halls assigned.</p>}
+      {session.halls.length === 0 && <p className="text-sm text-neutral-500">No halls assigned.</p>}
       <ul className="space-y-3">
         {session.halls.map((h) => (
-          <li key={h.id} className="rounded-md border border-slate-200 p-3 text-sm">
+          <li key={h.id} className="rounded-md border border-neutral-200 p-3 text-sm">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
-                <span className="font-medium text-slate-900">{h.hall.code}</span> <span className="text-slate-600">{h.hall.name}</span>
-                <span className="ml-2 text-slate-500">{h.totalStudents}/{h.hall.capacity} seats</span>
+                <span className="font-medium text-neutral-900">{h.hall.code}</span> <span className="text-neutral-600">{h.hall.name}</span>
+                <span className="ml-2 text-neutral-500">{h.totalStudents}/{h.hall.capacity} seats</span>
               </div>
               <div className="flex gap-3">
-                <button type="button" className="text-indigo-700 hover:underline" aria-label={`Edit ${h.hall.code}`} onClick={() => setEditing(h)}>Edit</button>
+                <button type="button" className="link" aria-label={`Edit ${h.hall.code}`} onClick={() => setEditing(h)}>Edit</button>
                 <button
                   type="button"
                   className="text-red-700 hover:underline"
@@ -202,10 +202,10 @@ function HallsSection({ session, mutations, run }: { session: SessionDetail; mut
                 </button>
               </div>
             </div>
-            <p className="mt-1 text-slate-600">{h.seating.map((s) => `${s.subjectCode}: ${s.studentCount}`).join(' · ') || 'No students seated'}</p>
-            <p className="mt-1 text-slate-800">
+            <p className="mt-1 text-neutral-600">{h.seating.map((s) => `${s.subjectCode}: ${s.studentCount}`).join(' · ') || 'No students seated'}</p>
+            <p className="mt-1 text-neutral-800">
               <strong>{h.staffing.total}</strong> invigilator{h.staffing.total === 1 ? '' : 's'}
-              {h.staffing.chief > 0 && ' (incl. chief)'} <span className="text-slate-500">- {h.staffing.basis}</span>
+              {h.staffing.chief > 0 && ' (incl. chief)'} <span className="text-neutral-500">- {h.staffing.basis}</span>
             </p>
           </li>
         ))}
@@ -217,7 +217,7 @@ function HallsSection({ session, mutations, run }: { session: SessionDetail; mut
           <Button type="button" variant="secondary" onClick={() => setEditing('new')} disabled={session.exams.length === 0}>
             Add hall
           </Button>
-          {session.exams.length === 0 && <p className="mt-1 text-xs text-slate-500">Add exams first, then seat their students in halls.</p>}
+          {session.exams.length === 0 && <p className="mt-1 text-xs text-neutral-500">Add exams first, then seat their students in halls.</p>}
         </div>
       )}
     </Section>
@@ -274,7 +274,7 @@ function HallForm({ session, hall, mutations, onDone }: { session: SessionDetail
           />
         )}
         <fieldset className="space-y-2">
-          <legend className="text-sm font-medium text-slate-700">Students seated per exam</legend>
+          <legend className="text-sm font-medium text-neutral-700">Students seated per exam</legend>
           {session.exams.map((e) => (
             <TextField
               key={e.id}
@@ -285,7 +285,7 @@ function HallForm({ session, hall, mutations, onDone }: { session: SessionDetail
               onChange={(ev) => setCounts({ ...counts, [e.id]: ev.target.value })}
             />
           ))}
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-neutral-600">
             Total {total}
             {capacity !== undefined && ` of ${capacity} seats`}
           </p>

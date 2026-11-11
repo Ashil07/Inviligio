@@ -19,7 +19,7 @@ export function RemunerationPage() {
   const [periodId, setPeriodId] = useState<string>()
   const pay = usePay(periodId)
   return (
-    <main className="mx-auto max-w-6xl space-y-6 px-4 py-8">
+    <div className="space-y-6">
       <PageHeader
         title="Remuneration"
         description="Pay for invigilation duties. A duty is paid once its session has ended, at the rate for its role on that day, unless the person was marked absent on the duty chart."
@@ -32,7 +32,7 @@ export function RemunerationPage() {
       ) : (
         <PeriodPay pay={pay.data} onPeriod={setPeriodId} />
       )}
-    </main>
+    </div>
   )
 }
 
@@ -82,10 +82,10 @@ function Rates() {
       <Table head={['Role', 'From', 'Amount', 'Added by', '']} empty={!rates.isPending && (rates.data ?? []).length === 0 && 'No rates yet. Add one below; until then duties are counted but not paid.'}>
         {(rates.data ?? []).map((r) => (
           <tr key={r.id}>
-            <td className="px-4 py-2 text-slate-800">{roleName(r.role)}</td>
-            <td className="px-4 py-2 text-slate-600">{formatDate(r.effectiveFrom)}</td>
-            <td className="px-4 py-2 font-medium text-slate-900">{money(r.amount, r.currency)}</td>
-            <td className="px-4 py-2 text-slate-600">{r.createdByName ?? '-'}</td>
+            <td className="px-4 py-2 text-neutral-800">{roleName(r.role)}</td>
+            <td className="px-4 py-2 text-neutral-600">{formatDate(r.effectiveFrom)}</td>
+            <td className="px-4 py-2 font-medium text-neutral-900">{money(r.amount, r.currency)}</td>
+            <td className="px-4 py-2 text-neutral-600">{r.createdByName ?? '-'}</td>
             <td className="px-4 py-2 text-right">
               <button type="button" className="text-sm font-medium text-red-700 hover:underline" aria-label={`Delete ${roleName(r.role)} rate from ${r.effectiveFrom}`} onClick={() => void onDelete(r)}>
                 Delete
@@ -113,7 +113,7 @@ function Rates() {
 function PeriodPay({ pay, onPeriod }: { pay: Pay; onPeriod: (id: string) => void }) {
   const s = pay.summary
   if (!s) {
-    return <p className="rounded-md border border-slate-200 bg-white p-4 text-sm text-slate-600">No duty chart has been published yet, so there is nothing to pay.</p>
+    return <p className="rounded-md border border-neutral-200 bg-white p-4 text-sm text-neutral-600">No duty chart has been published yet, so there is nothing to pay.</p>
   }
   return (
     <>
@@ -128,7 +128,7 @@ function PeriodPay({ pay, onPeriod }: { pay: Pay; onPeriod: (id: string) => void
             />
           </div>
         ) : (
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-neutral-600">
             {pay.periodName}: published duty chart version {pay.chartVersion}.
           </p>
         )}
@@ -151,15 +151,15 @@ function PeriodPay({ pay, onPeriod }: { pay: Pay; onPeriod: (id: string) => void
         <Table head={['Faculty', 'Department', 'Done', 'As chief', 'Absent', 'To come', 'Amount']} empty={pay.faculty.length === 0 && 'Nobody has duties in this chart.'}>
           {pay.faculty.map((f) => (
             <tr key={f.facultyId}>
-              <td className="px-4 py-2 text-slate-800">
-                {f.name} <span className="text-slate-500">({f.code})</span>
+              <td className="px-4 py-2 text-neutral-800">
+                {f.name} <span className="text-neutral-500">({f.code})</span>
               </td>
-              <td className="px-4 py-2 text-slate-600">{f.departmentCode}</td>
-              <td className="px-4 py-2 text-slate-600">{f.completed}</td>
-              <td className="px-4 py-2 text-slate-600">{f.chiefCompleted}</td>
-              <td className="px-4 py-2 text-slate-600">{f.absent}</td>
-              <td className="px-4 py-2 text-slate-600">{f.upcoming}</td>
-              <td className="px-4 py-2 font-medium text-slate-900">
+              <td className="px-4 py-2 text-neutral-600">{f.departmentCode}</td>
+              <td className="px-4 py-2 text-neutral-600">{f.completed}</td>
+              <td className="px-4 py-2 text-neutral-600">{f.chiefCompleted}</td>
+              <td className="px-4 py-2 text-neutral-600">{f.absent}</td>
+              <td className="px-4 py-2 text-neutral-600">{f.upcoming}</td>
+              <td className="px-4 py-2 font-medium text-neutral-900">
                 {money(f.amount, s.currency)}
                 {f.withoutRate > 0 && <span className="ml-1 text-xs font-normal text-amber-800">+{f.withoutRate} without rate</span>}
               </td>
@@ -171,12 +171,12 @@ function PeriodPay({ pay, onPeriod }: { pay: Pay; onPeriod: (id: string) => void
         <Table head={['Department', 'Faculty', 'Duties done', 'Amount']}>
           {pay.departments.map((d) => (
             <tr key={d.code}>
-              <td className="px-4 py-2 text-slate-800">
-                {d.name} <span className="text-slate-500">({d.code})</span>
+              <td className="px-4 py-2 text-neutral-800">
+                {d.name} <span className="text-neutral-500">({d.code})</span>
               </td>
-              <td className="px-4 py-2 text-slate-600">{d.faculty}</td>
-              <td className="px-4 py-2 text-slate-600">{d.completed}</td>
-              <td className="px-4 py-2 font-medium text-slate-900">{money(d.amount, s.currency)}</td>
+              <td className="px-4 py-2 text-neutral-600">{d.faculty}</td>
+              <td className="px-4 py-2 text-neutral-600">{d.completed}</td>
+              <td className="px-4 py-2 font-medium text-neutral-900">{money(d.amount, s.currency)}</td>
             </tr>
           ))}
         </Table>
@@ -187,9 +187,9 @@ function PeriodPay({ pay, onPeriod }: { pay: Pay; onPeriod: (id: string) => void
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-3">
-      <dt className="text-xs text-slate-500">{label}</dt>
-      <dd className="text-lg font-semibold text-slate-900">{value}</dd>
+    <div className="rounded-lg border border-neutral-200 bg-white p-3">
+      <dt className="text-xs text-neutral-500">{label}</dt>
+      <dd className="text-lg font-semibold text-neutral-900">{value}</dd>
     </div>
   )
 }

@@ -78,7 +78,7 @@ export function AllocationPage() {
 
   return (
     <div className="space-y-6">
-      <Link to={`/admin/exams/${periodId}`} className="text-sm text-indigo-700 hover:underline">← {period.data.name}</Link>
+      <Link to={`/admin/exams/${periodId}`} className="text-sm link">← {period.data.name}</Link>
       <PageHeader
         title="Duty allocation"
         description="Invigilo assigns faculty to every hall using the college policy. Strict rules are never broken; positions it cannot fill are listed with the reasons."
@@ -87,7 +87,7 @@ export function AllocationPage() {
       {problem && <ErrorAlert>{problem}</ErrorAlert>}
       {chart.error && <ErrorAlert>{toApiProblem(chart.error).detail ?? 'Could not load the chart.'}</ErrorAlert>}
       {!c && !chart.error && (
-        <p className="text-sm text-slate-600">No duty chart yet. Add sessions, exams and seating, then generate.</p>
+        <p className="text-sm text-neutral-600">No duty chart yet. Add sessions, exams and seating, then generate.</p>
       )}
       {c && <ChartReview chart={c} />}
       {c && <Versions periodId={periodId} />}
@@ -102,7 +102,7 @@ export function ChartVersionPage() {
   if (chart.isPending) return <FullPageSpinner label="Loading chart version" />
   return (
     <div className="space-y-6">
-      <Link to={`/admin/exams/${periodId}/allocation`} className="text-sm text-indigo-700 hover:underline">← Duty allocation</Link>
+      <Link to={`/admin/exams/${periodId}/allocation`} className="text-sm link">← Duty allocation</Link>
       <PageHeader title={`Duty chart version ${chartVersion}`} description="A read-only view of this version." />
       {chart.error && <ErrorAlert>{toApiProblem(chart.error).detail ?? 'Could not load this version.'}</ErrorAlert>}
       {chart.data && <ChartReview chart={chart.data} readOnly />}
@@ -154,9 +154,9 @@ function ChartReview({ chart, readOnly = false }: { chart: DutyChart; readOnly?:
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1 text-sm text-slate-600">
+      <div className="space-y-1 text-sm text-neutral-600">
         <p>
-          <span className="font-medium text-slate-900">
+          <span className="font-medium text-neutral-900">
             {STATUS_LABEL[chart.status]} version {chart.chartVersion}
           </span>
           , created {formatDateTime(chart.generatedAt)}
@@ -166,7 +166,7 @@ function ChartReview({ chart, readOnly = false }: { chart: DutyChart; readOnly?:
         {chart.status === 'DRAFT' && chart.publishedVersion != null && (
           <p>
             Version {chart.publishedVersion} is published and stays in force until you publish this draft.{' '}
-            <Link to={`/admin/exams/${chart.periodId}/allocation/versions/${chart.publishedVersion}`} className="font-medium text-indigo-700 hover:underline">
+            <Link to={`/admin/exams/${chart.periodId}/allocation/versions/${chart.publishedVersion}`} className="font-medium link">
               Open version {chart.publishedVersion}
             </Link>{' '}
             to choose substitutes for it.
@@ -229,11 +229,11 @@ function ChartReview({ chart, readOnly = false }: { chart: DutyChart; readOnly?:
                   <AlertTriangle className="size-4" aria-hidden />
                   {formatDate(u.date)} {u.sessionLabel} · {u.hallCode}: {u.missing} {u.role === 'CHIEF' ? 'chief ' : ''}position{u.missing > 1 ? 's' : ''} open
                 </p>
-                <p className="mt-1 text-slate-700">
+                <p className="mt-1 text-neutral-700">
                   Of {u.reason.totalFaculty} faculty:{' '}
                   {Object.entries(u.reason.eliminated).map(([r, n]) => `${n} ${REASON_LABEL[r] ?? r}`).join(', ') || 'none excluded'}.
                 </p>
-                <ul className="mt-1 list-disc pl-5 text-slate-700">
+                <ul className="mt-1 list-disc pl-5 text-neutral-700">
                   {u.reason.suggestions.map((t) => (
                     <li key={t}>{t}</li>
                   ))}
@@ -281,9 +281,9 @@ function ChartReview({ chart, readOnly = false }: { chart: DutyChart; readOnly?:
 
 function Stat({ label, value, warn }: { label: string; value: string; warn?: boolean }) {
   return (
-    <div className={`rounded-lg border p-3 ${warn ? 'border-red-200 bg-red-50' : 'border-slate-200 bg-white'}`}>
-      <dt className="text-xs text-slate-500">{label}</dt>
-      <dd className="text-lg font-semibold text-slate-900">{value}</dd>
+    <div className={`rounded-lg border p-3 ${warn ? 'border-red-200 bg-red-50' : 'border-neutral-200 bg-white'}`}>
+      <dt className="text-xs text-neutral-500">{label}</dt>
+      <dd className="text-lg font-semibold text-neutral-900">{value}</dd>
     </div>
   )
 }
@@ -320,38 +320,38 @@ function ChartGrid({
       <div className="max-w-xs">
         <SelectField label="Date" value={date} onChange={(e) => setDate(e.target.value)} options={dates.map((d) => ({ value: d, label: formatDate(d) }))} />
       </div>
-      {shown.length === 0 && <p className="text-sm text-slate-500">No halls in use on this date.</p>}
+      {shown.length === 0 && <p className="text-sm text-neutral-500">No halls in use on this date.</p>}
       {shown.map((s) => (
         <div key={s.id}>
-          <h3 className="mb-2 text-sm font-semibold text-slate-800">
+          <h3 className="mb-2 text-sm font-semibold text-neutral-800">
             {s.label} {hhmm(s.startTime)}-{hhmm(s.endTime)}
           </h3>
           <Table head={['Hall', 'Needed', 'Invigilators']}>
             {s.halls.map((h) => (
               <tr key={h.sessionHallId}>
-                <td className="px-4 py-2 align-top font-medium text-slate-900">{h.hallCode}</td>
-                <td className="px-4 py-2 align-top text-slate-600">{h.required}</td>
+                <td className="px-4 py-2 align-top font-medium text-neutral-900">{h.hallCode}</td>
+                <td className="px-4 py-2 align-top text-neutral-600">{h.required}</td>
                 <td className="px-4 py-2">
                   <ul className="space-y-1">
                     {h.duties.map((d) => (
                       <li key={d.assignmentId} className="flex items-start justify-between gap-3">
                         <details className="min-w-0">
-                          <summary className={`cursor-pointer ${issueIds.has(d.assignmentId) ? 'text-red-700' : 'text-slate-800'}`}>
-                            {d.facultyName} <span className="text-slate-500">({d.departmentCode})</span>
-                            {d.role === 'CHIEF' && <span className="ml-2 rounded bg-indigo-50 px-1.5 text-xs font-medium text-indigo-700">chief</span>}
-                            {d.source === 'MANUAL' && <span className="ml-2 rounded bg-slate-100 px-1.5 text-xs font-medium text-slate-600">edited</span>}
-                            {d.source === 'SWAP' && <span className="ml-2 rounded bg-slate-100 px-1.5 text-xs font-medium text-slate-600">swapped</span>}
+                          <summary className={`cursor-pointer ${issueIds.has(d.assignmentId) ? 'text-red-700' : 'text-neutral-800'}`}>
+                            {d.facultyName} <span className="text-neutral-500">({d.departmentCode})</span>
+                            {d.role === 'CHIEF' && <span className="ml-2 rounded bg-primary-50 px-1.5 text-xs font-medium text-primary-700">chief</span>}
+                            {d.source === 'MANUAL' && <span className="ml-2 rounded bg-neutral-100 px-1.5 text-xs font-medium text-neutral-600">edited</span>}
+                            {d.source === 'SWAP' && <span className="ml-2 rounded bg-neutral-100 px-1.5 text-xs font-medium text-neutral-600">swapped</span>}
                             {d.source === 'SUBSTITUTE' && <span className="ml-2 rounded bg-amber-50 px-1.5 text-xs font-medium text-amber-800">substitute</span>}
                             {d.status === 'ABSENT' && <span className="ml-2 rounded bg-red-50 px-1.5 text-xs font-medium text-red-700">absent</span>}
                             {issueIds.has(d.assignmentId) && <span className="ml-2 text-xs font-medium">breaks a rule</span>}
                           </summary>
-                          <p className="mt-1 text-xs text-slate-600">{explain(d)}</p>
+                          <p className="mt-1 text-xs text-neutral-600">{explain(d)}</p>
                         </details>
                         {onEdit && (
                           <span className="flex shrink-0 gap-2 text-xs">
                             <button
                               type="button"
-                              className="font-medium text-indigo-700 hover:underline"
+                              className="font-medium link"
                               aria-label={`Replace ${d.facultyName} in ${h.hallCode}`}
                               onClick={() => onEdit({ kind: 'replace', session: s, hall: h, duty: d })}
                             >
@@ -359,7 +359,7 @@ function ChartGrid({
                             </button>
                             <button
                               type="button"
-                              className="font-medium text-slate-600 hover:underline"
+                              className="font-medium text-neutral-600 hover:underline"
                               aria-label={`Remove ${d.facultyName} from ${h.hallCode}`}
                               onClick={() => onEdit({ kind: 'remove', session: s, hall: h, duty: d })}
                             >
@@ -370,7 +370,7 @@ function ChartGrid({
                         {onAttendance && sessionEnded(s) && (
                           <button
                             type="button"
-                            className="shrink-0 text-xs font-medium text-slate-600 hover:underline"
+                            className="shrink-0 text-xs font-medium text-neutral-600 hover:underline"
                             aria-label={`${d.status === 'ABSENT' ? 'Mark present' : 'Mark absent'}: ${d.facultyName} in ${h.hallCode}`}
                             onClick={() => onAttendance(d, d.status !== 'ABSENT')}
                           >
@@ -380,7 +380,7 @@ function ChartGrid({
                         {onSubstitute && !sessionEnded(s) && (
                           <button
                             type="button"
-                            className="shrink-0 text-xs font-medium text-indigo-700 hover:underline"
+                            className="shrink-0 text-xs font-medium link"
                             aria-label={`Substitute for ${d.facultyName} in ${h.hallCode}`}
                             onClick={() => onSubstitute({ session: s, hall: h, duty: d })}
                           >
@@ -399,7 +399,7 @@ function ChartGrid({
                           {onEdit && (
                             <button
                               type="button"
-                              className="text-xs font-medium text-indigo-700 hover:underline"
+                              className="text-xs font-medium link"
                               aria-label={`Fill ${u.role === 'CHIEF' ? 'chief ' : ''}position in ${h.hallCode}`}
                               onClick={() => onEdit({ kind: 'fill', session: s, hall: h, role: u.role })}
                             >
@@ -495,17 +495,17 @@ function Versions({ periodId }: { periodId: string }) {
         <Table head={['Version', 'Status', 'Filled', 'Created', 'Published', '']}>
           {versions.data.map((v) => (
             <tr key={v.chartVersion}>
-              <td className="px-4 py-2 font-medium text-slate-900">{v.chartVersion}</td>
-              <td className="px-4 py-2 text-slate-700">{STATUS_LABEL[v.status]}</td>
-              <td className="px-4 py-2 text-slate-600">
+              <td className="px-4 py-2 font-medium text-neutral-900">{v.chartVersion}</td>
+              <td className="px-4 py-2 text-neutral-700">{STATUS_LABEL[v.status]}</td>
+              <td className="px-4 py-2 text-neutral-600">
                 {v.filled} of {v.positions}
               </td>
-              <td className="px-4 py-2 text-slate-600">{formatDateTime(v.createdAt)}</td>
-              <td className="px-4 py-2 text-slate-600">
+              <td className="px-4 py-2 text-neutral-600">{formatDateTime(v.createdAt)}</td>
+              <td className="px-4 py-2 text-neutral-600">
                 {v.publishedAt ? `${formatDateTime(v.publishedAt)}${v.publishedBy ? ` · ${v.publishedBy}` : ''}` : '-'}
               </td>
               <td className="px-4 py-2">
-                <Link to={`/admin/exams/${periodId}/allocation/versions/${v.chartVersion}`} className="text-sm font-medium text-indigo-700 hover:underline">
+                <Link to={`/admin/exams/${periodId}/allocation/versions/${v.chartVersion}`} className="text-sm font-medium link">
                   View
                 </Link>
               </td>
@@ -521,15 +521,15 @@ function History({ periodId }: { periodId: string }) {
   const history = useChartHistory(periodId)
   return (
     <Section title="Edit history" description="Generation and every manual change to this chart, newest first.">
-      {history.isPending && <p className="text-sm text-slate-500">Loading history...</p>}
+      {history.isPending && <p className="text-sm text-neutral-500">Loading history...</p>}
       {history.error && <ErrorAlert>{toApiProblem(history.error).detail ?? 'Could not load the history.'}</ErrorAlert>}
-      {history.data?.length === 0 && <p className="text-sm text-slate-500">No changes yet.</p>}
+      {history.data?.length === 0 && <p className="text-sm text-neutral-500">No changes yet.</p>}
       {history.data && history.data.length > 0 && (
         <ol className="space-y-2">
           {history.data.map((h) => (
             <li key={h.id} className="text-sm">
-              <p className="text-slate-800">{h.summary}</p>
-              <p className="text-xs text-slate-500">
+              <p className="text-neutral-800">{h.summary}</p>
+              <p className="text-xs text-neutral-500">
                 {formatDateTime(h.occurredAt)}
                 {h.actorName ? ` · ${h.actorName}` : ''}
                 {h.reason ? ` · Reason: ${h.reason}` : ''}
@@ -548,13 +548,13 @@ function Workload({ chart }: { chart: DutyChart }) {
       <Table head={['Faculty', 'Department', 'Duties', 'As chief', 'Weight']}>
         {chart.workload.map((w) => (
           <tr key={w.facultyId}>
-            <td className="px-4 py-2 text-slate-800">
-              {w.name} <span className="text-slate-500">{w.code}</span>
+            <td className="px-4 py-2 text-neutral-800">
+              {w.name} <span className="text-neutral-500">{w.code}</span>
             </td>
-            <td className="px-4 py-2 text-slate-600">{w.departmentCode}</td>
-            <td className={`px-4 py-2 font-medium ${w.duties === 0 ? 'text-slate-400' : 'text-slate-900'}`}>{w.duties}</td>
-            <td className="px-4 py-2 text-slate-600">{w.chiefDuties}</td>
-            <td className="px-4 py-2 text-slate-600">{Number(w.dutyWeight).toFixed(2)}</td>
+            <td className="px-4 py-2 text-neutral-600">{w.departmentCode}</td>
+            <td className={`px-4 py-2 font-medium ${w.duties === 0 ? 'text-neutral-400' : 'text-neutral-900'}`}>{w.duties}</td>
+            <td className="px-4 py-2 text-neutral-600">{w.chiefDuties}</td>
+            <td className="px-4 py-2 text-neutral-600">{Number(w.dutyWeight).toFixed(2)}</td>
           </tr>
         ))}
       </Table>

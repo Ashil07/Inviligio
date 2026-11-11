@@ -54,8 +54,8 @@ export function DepartmentsPage() {
       <Table head={['Code', 'Name', 'Status', '']} empty={departments.data?.length === 0 && 'No departments yet.'}>
         {departments.data?.map((d) => (
           <tr key={d.id}>
-            <td className="px-4 py-2 font-medium text-slate-900">{d.code}</td>
-            <td className="px-4 py-2 text-slate-700">{d.name}</td>
+            <td className="px-4 py-2 font-medium text-neutral-900">{d.code}</td>
+            <td className="px-4 py-2 text-neutral-700">{d.name}</td>
             <td className="px-4 py-2"><StatusBadge active={d.active} /></td>
             <td className="px-4 py-2"><RowActions label={d.code} onEdit={() => setEditing(d)} onDelete={() => void handleDelete(d)} /></td>
           </tr>

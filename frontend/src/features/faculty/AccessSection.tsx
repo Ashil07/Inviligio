@@ -87,12 +87,12 @@ function Invite({ faculty, access }: { faculty: FacultyDetail; access: AccessDet
       {problem && <ErrorAlert>{problem}</ErrorAlert>}
       {!faculty.email && <p className="text-sm text-amber-800">Add an email address above before inviting.</p>}
       {access.status === 'INVITED' && access.invitation && !link && (
-        <p className="text-sm text-slate-700">
+        <p className="text-sm text-neutral-700">
           Invitation sent to <strong>{access.invitation.email}</strong>, valid until {formatDateTime(access.invitation.expiresAt)}.
           The link is shown only when it is created; create a new one if it was lost.
         </p>
       )}
-      {access.status === 'NONE' && <p className="text-sm text-slate-700">No login yet.</p>}
+      {access.status === 'NONE' && <p className="text-sm text-neutral-700">No login yet.</p>}
       {link && issued && (
         <div className="space-y-2">
           <SuccessNotice>
@@ -149,7 +149,7 @@ function ManageLogin({ faculty, access }: { faculty: FacultyDetail; access: Acce
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-slate-700">
+      <p className="text-sm text-neutral-700">
         Signs in as <strong>{access.loginEmail}</strong>. {access.status === 'DISABLED' && 'Access is currently disabled.'}
       </p>
       {access.currentUser && <p className="text-sm text-amber-800">This is your own login. Another administrator must change it.</p>}

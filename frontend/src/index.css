@@ -1,7 +1,90 @@
 @import 'tailwindcss';
 
+/*
+ * Invigilo design tokens (Swiss / International style):
+ * one grotesque typeface, black ink on white, neutral greys, a single red accent,
+ * hairline rules instead of shadows and near-square corners.
+ *
+ * - `primary-*` is the ink scale used for buttons, focus and selected states (600-800 are black).
+ * - `accent` is the brand red; use it sparingly (brand mark, active marker, key figures).
+ * - Status colours (red, amber, emerald) keep Tailwind's defaults.
+ */
+@theme {
+  --font-sans: 'Inter', 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+
+  --color-primary-50: oklch(97% 0 0);
+  --color-primary-100: oklch(92.2% 0 0);
+  --color-primary-200: oklch(87% 0 0);
+  --color-primary-300: oklch(70.8% 0 0);
+  --color-primary-400: oklch(55.6% 0 0);
+  --color-primary-500: oklch(20.5% 0 0);
+  --color-primary-600: oklch(14.5% 0 0);
+  --color-primary-700: oklch(0% 0 0);
+  --color-primary-800: oklch(0% 0 0);
+
+  --color-accent: #e30613;
+  --color-accent-dark: #b8050f;
+  --color-ink: #0a0a0a;
+
+  --radius-xs: 1px;
+  --radius-sm: 2px;
+  --radius-md: 2px;
+  --radius-lg: 3px;
+  --radius-xl: 4px;
+
+  --shadow-sm: 0 0 #0000;
+}
+
+/* A plain text link: ink, with a quiet underline that darkens on hover. */
+@utility link {
+  color: var(--color-ink);
+  text-decoration-line: underline;
+  text-decoration-color: var(--color-neutral-300);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  &:hover {
+    text-decoration-color: currentColor;
+  }
+}
+
+/* Small uppercase label above a heading or group. */
+@utility eyebrow {
+  font-size: 0.6875rem;
+  line-height: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-neutral-500);
+}
+
 @layer base {
   html {
-    @apply bg-slate-50 text-slate-900 antialiased;
+    @apply bg-white text-neutral-900 antialiased;
+    font-feature-settings: 'cv11', 'ss01';
+    -webkit-tap-highlight-color: transparent;
+  }
+  table {
+    font-variant-numeric: tabular-nums;
+  }
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.015em;
+  }
+  h1 {
+    letter-spacing: -0.025em;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 2px;
+  }
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: none;
+  }
+  ::selection {
+    background: var(--color-accent);
+    color: white;
   }
 }

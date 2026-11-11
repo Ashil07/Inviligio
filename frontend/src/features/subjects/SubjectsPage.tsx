@@ -60,7 +60,7 @@ export function SubjectsPage() {
           </Button>
         }
       />
-      {departments.data?.length === 0 && <p className="text-sm text-slate-600">Add a department before adding subjects.</p>}
+      {departments.data?.length === 0 && <p className="text-sm text-neutral-600">Add a department before adding subjects.</p>}
       {problem && <ErrorAlert>{problem}</ErrorAlert>}
       {editing && departments.data && (
         <SubjectForm
@@ -106,18 +106,18 @@ export function SubjectsPage() {
       <Table head={['Code', 'Name', 'Department', 'Programme', 'Sem.', 'Status', '']} empty={data?.total === 0 && 'No subjects found.'}>
         {data?.items.map((s) => (
           <tr key={s.id}>
-            <td className="px-4 py-2 font-medium text-slate-900">{s.code}</td>
-            <td className="px-4 py-2 text-slate-700">{s.name}</td>
-            <td className="px-4 py-2 text-slate-600">{s.department.code}</td>
-            <td className="px-4 py-2 text-slate-600">{s.programme ?? '-'}</td>
-            <td className="px-4 py-2 text-slate-600">{s.semester ?? '-'}</td>
+            <td className="px-4 py-2 font-medium text-neutral-900">{s.code}</td>
+            <td className="px-4 py-2 text-neutral-700">{s.name}</td>
+            <td className="px-4 py-2 text-neutral-600">{s.department.code}</td>
+            <td className="px-4 py-2 text-neutral-600">{s.programme ?? '-'}</td>
+            <td className="px-4 py-2 text-neutral-600">{s.semester ?? '-'}</td>
             <td className="px-4 py-2"><StatusBadge active={s.active} /></td>
             <td className="px-4 py-2"><RowActions label={s.code} onEdit={() => setEditing(s)} onDelete={() => void handleDelete(s)} /></td>
           </tr>
         ))}
       </Table>
       {data && data.total > PAGE_SIZE && (
-        <div className="flex items-center justify-between text-sm text-slate-600">
+        <div className="flex items-center justify-between text-sm text-neutral-600">
           <span>
             {first}-{last} of {data.total}
           </span>

@@ -39,7 +39,7 @@ export function PeriodDetailPage() {
 
   return (
     <div className="space-y-6">
-      <Link to="/admin/exams" className="text-sm text-indigo-700 hover:underline">← All examination periods</Link>
+      <Link to="/admin/exams" className="text-sm link">← All exam periods</Link>
       <PageHeader
         title={p.name}
         description={`${formatDate(p.startDate)} to ${formatDate(p.endDate)} · ${p.sessionCount} sessions · ${totals.students} students seated · ${totals.positions} invigilator positions`}
@@ -55,7 +55,7 @@ export function PeriodDetailPage() {
       <div className="flex flex-wrap gap-2">
         <Link
           to={`/admin/exams/${p.id}/allocation`}
-          className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
+          className="rounded-md bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary-700"
         >
           Allocate duties
         </Link>
@@ -69,15 +69,15 @@ export function PeriodDetailPage() {
       <Table head={['Date', 'Session', 'Time', 'Exams', 'Halls', 'Students', 'Positions', '']} empty={sessions.data?.length === 0 && 'No sessions yet.'}>
         {sessions.data?.map((s) => (
           <tr key={s.id}>
-            <td className="px-4 py-2 text-slate-700">{formatDate(s.date)}</td>
+            <td className="px-4 py-2 text-neutral-700">{formatDate(s.date)}</td>
             <td className="px-4 py-2">
-              <Link to={`/admin/exams/sessions/${s.id}`} className="font-medium text-indigo-700 hover:underline">{s.label}</Link>
+              <Link to={`/admin/exams/sessions/${s.id}`} className="font-medium link">{s.label}</Link>
             </td>
-            <td className="px-4 py-2 text-slate-600">{hhmm(s.startTime)}-{hhmm(s.endTime)}</td>
-            <td className="px-4 py-2 text-slate-600">{s.examCount}</td>
-            <td className="px-4 py-2 text-slate-600">{s.hallCount}</td>
-            <td className="px-4 py-2 text-slate-600">{s.students}</td>
-            <td className="px-4 py-2 text-slate-600">{s.positions}</td>
+            <td className="px-4 py-2 text-neutral-600">{hhmm(s.startTime)}-{hhmm(s.endTime)}</td>
+            <td className="px-4 py-2 text-neutral-600">{s.examCount}</td>
+            <td className="px-4 py-2 text-neutral-600">{s.hallCount}</td>
+            <td className="px-4 py-2 text-neutral-600">{s.students}</td>
+            <td className="px-4 py-2 text-neutral-600">{s.positions}</td>
             <td className="px-4 py-2 text-amber-700">
               {s.warningCount > 0 && (
                 <span className="inline-flex items-center gap-1" title="Open the session to see the warnings">
@@ -151,7 +151,7 @@ function GenerateSessions({ period, onDone }: { period: Period; onDone: () => vo
   return (
     <EditPanel title="Generate sessions" onClose={onDone}>
       <form onSubmit={(ev) => void submit(ev)} className="space-y-4">
-        <p className="text-sm text-slate-600">Creates the same daily sessions for every date in the range. Existing sessions are kept.</p>
+        <p className="text-sm text-neutral-600">Creates the same daily sessions for every date in the range. Existing sessions are kept.</p>
         {problem && <ErrorAlert>{problem}</ErrorAlert>}
         {result && <SuccessNotice>{result}</SuccessNotice>}
         <div className="grid gap-4 sm:grid-cols-4">

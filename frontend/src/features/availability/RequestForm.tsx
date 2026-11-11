@@ -56,7 +56,7 @@ export function RequestForm({
   }
 
   if (!allowDays && !allowSession) {
-    return <p className="text-sm text-slate-600">Your college does not accept availability requests online. Contact the examination cell.</p>
+    return <p className="text-sm text-neutral-600">Your college does not accept availability requests online. Contact the examination cell.</p>
   }
 
   return (
@@ -66,11 +66,11 @@ export function RequestForm({
         <fieldset className="flex gap-6 text-sm">
           <legend className="sr-only">Unavailable for</legend>
           <label className="flex items-center gap-2">
-            <input type="radio" name="mode" checked={mode === 'days'} onChange={() => setMode('days')} className="accent-indigo-600" />
+            <input type="radio" name="mode" checked={mode === 'days'} onChange={() => setMode('days')} className="accent-primary-600" />
             Whole days
           </label>
           <label className="flex items-center gap-2">
-            <input type="radio" name="mode" checked={mode === 'session'} onChange={() => setMode('session')} className="accent-indigo-600" />
+            <input type="radio" name="mode" checked={mode === 'session'} onChange={() => setMode('session')} className="accent-primary-600" />
             One session
           </label>
         </fieldset>

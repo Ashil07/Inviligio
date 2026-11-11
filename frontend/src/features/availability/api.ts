@@ -55,7 +55,7 @@ export const STATUS_STYLE: Record<AvailabilityStatus, string> = {
   PENDING: 'bg-amber-100 text-amber-800',
   APPROVED: 'bg-emerald-50 text-emerald-700',
   REJECTED: 'bg-red-50 text-red-700',
-  CANCELLED: 'bg-slate-100 text-slate-600',
+  CANCELLED: 'bg-neutral-100 text-neutral-600',
 }
 
 const keys = {

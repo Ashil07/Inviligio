@@ -30,7 +30,7 @@ export function HodDashboard() {
     const p = toApiProblem(overview.error)
     if (p.code === 'NO_DEPARTMENT_SCOPE') {
       return (
-        <p className="mt-6 flex items-start gap-2 rounded-md border border-slate-200 bg-white p-4 text-sm text-slate-700">
+        <p className="mt-6 flex items-start gap-2 rounded-md border border-neutral-200 bg-white p-4 text-sm text-neutral-700">
           <Info className="mt-0.5 size-4 shrink-0" aria-hidden />
           Your login is not linked to a faculty record, so Invigilo does not know your department. Ask the examination cell to link it.
         </p>
@@ -50,15 +50,15 @@ export function HodDashboard() {
     <div className="mt-6 space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-lg font-semibold text-slate-900">
+          <p className="text-lg font-semibold text-neutral-900">
             {data.department.name} ({data.department.code})
           </p>
           {data.periodId ? (
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-neutral-600">
               {data.periodName}: duty chart version {data.chartVersion}, published {formatDateTime(data.publishedAt)}.
             </p>
           ) : (
-            <p className="text-sm text-slate-600">No duty chart has been published yet. Duties and workload appear here once the examination cell publishes one.</p>
+            <p className="text-sm text-neutral-600">No duty chart has been published yet. Duties and workload appear here once the examination cell publishes one.</p>
           )}
         </div>
         {data.periods.length > 1 && (
@@ -104,9 +104,9 @@ export function HodDashboard() {
 
 function Stat({ label, value, tone }: { label: string; value: number; tone?: string }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-3">
-      <dt className="text-xs text-slate-500">{label}</dt>
-      <dd className={`text-lg font-semibold ${tone ?? 'text-slate-900'}`}>{value}</dd>
+    <div className="rounded-lg border border-neutral-200 bg-white p-3">
+      <dt className="text-xs text-neutral-500">{label}</dt>
+      <dd className={`text-lg font-semibold ${tone ?? 'text-neutral-900'}`}>{value}</dd>
     </div>
   )
 }
@@ -116,20 +116,20 @@ function WorkloadTable({ rows, showDuties }: { rows: MemberRow[]; showDuties: bo
     <Table head={showDuties ? ['Faculty', 'Designation', 'Duties', 'As chief', 'Even share', 'Workload'] : ['Faculty', 'Designation']} empty={rows.length === 0 && 'No faculty in this department.'}>
       {rows.map((f) => (
         <tr key={f.facultyId}>
-          <td className="px-4 py-2 text-slate-800">
-            {f.name} <span className="text-slate-500">({f.code})</span>
+          <td className="px-4 py-2 text-neutral-800">
+            {f.name} <span className="text-neutral-500">({f.code})</span>
           </td>
-          <td className="px-4 py-2 text-slate-600">{f.designation ?? '-'}</td>
+          <td className="px-4 py-2 text-neutral-600">{f.designation ?? '-'}</td>
           {showDuties && (
             <>
-              <td className="px-4 py-2 font-medium text-slate-900">{f.duties}</td>
-              <td className="px-4 py-2 text-slate-600">{f.chiefDuties}</td>
-              <td className="px-4 py-2 text-slate-600">{f.active ? f.fairShare : '-'}</td>
+              <td className="px-4 py-2 font-medium text-neutral-900">{f.duties}</td>
+              <td className="px-4 py-2 text-neutral-600">{f.chiefDuties}</td>
+              <td className="px-4 py-2 text-neutral-600">{f.active ? f.fairShare : '-'}</td>
               <td className="px-4 py-2">
                 {f.load ? (
                   <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${LOAD_STYLE[f.load].className}`}>{LOAD_STYLE[f.load].label}</span>
                 ) : (
-                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">Inactive</span>
+                  <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-xs font-medium text-neutral-600">Inactive</span>
                 )}
               </td>
             </>
@@ -145,15 +145,15 @@ function DutyTable({ duties }: { duties: DepartmentDuty[] }) {
     <Table head={['Date', 'Session', 'Hall', 'Faculty', 'Role']} empty={duties.length === 0 && 'Nobody from your department has a duty in this chart.'}>
       {duties.map((d) => (
         <tr key={d.assignmentId}>
-          <td className="px-4 py-2 text-slate-800">{formatDate(d.date)}</td>
-          <td className="px-4 py-2 text-slate-600">
+          <td className="px-4 py-2 text-neutral-800">{formatDate(d.date)}</td>
+          <td className="px-4 py-2 text-neutral-600">
             {d.sessionLabel} {hhmm(d.startTime)}-{hhmm(d.endTime)}
           </td>
-          <td className="px-4 py-2 text-slate-800">
-            {d.hallCode} <span className="text-slate-500">· {d.hallName}</span>
+          <td className="px-4 py-2 text-neutral-800">
+            {d.hallCode} <span className="text-neutral-500">· {d.hallName}</span>
           </td>
-          <td className="px-4 py-2 text-slate-800">{d.facultyName}</td>
-          <td className="px-4 py-2 text-slate-600">{d.role === 'CHIEF' ? 'Chief invigilator' : 'Invigilator'}</td>
+          <td className="px-4 py-2 text-neutral-800">{d.facultyName}</td>
+          <td className="px-4 py-2 text-neutral-600">{d.role === 'CHIEF' ? 'Chief invigilator' : 'Invigilator'}</td>
         </tr>
       ))}
     </Table>
@@ -166,23 +166,23 @@ function PendingLeave() {
   return (
     <Section title="Leave waiting for a decision">
       {pending.isPending ? (
-        <p className="text-sm text-slate-600">Loading requests...</p>
+        <p className="text-sm text-neutral-600">Loading requests...</p>
       ) : pending.error ? (
         <ErrorAlert>{toApiProblem(pending.error).detail ?? 'Could not load leave requests.'}</ErrorAlert>
       ) : (
-        <div className="space-y-2 text-sm text-slate-700">
+        <div className="space-y-2 text-sm text-neutral-700">
           <p>{list.length === 0 ? 'No requests are waiting.' : `${plural(list.length, 'request')} waiting.`}</p>
           {list.length > 0 && (
-            <ul className="divide-y divide-slate-100 rounded-md border border-slate-200 bg-white">
+            <ul className="divide-y divide-neutral-100 rounded-md border border-neutral-200 bg-white">
               {list.slice(0, 5).map((r) => (
                 <li key={r.id} className="px-3 py-2">
-                  <span className="font-medium text-slate-900">{r.faculty.name}</span> · {describeWhen(r)}
-                  {r.reason && <span className="text-slate-500"> · {r.reason}</span>}
+                  <span className="font-medium text-neutral-900">{r.faculty.name}</span> · {describeWhen(r)}
+                  {r.reason && <span className="text-neutral-500"> · {r.reason}</span>}
                 </li>
               ))}
             </ul>
           )}
-          <Link to="/hod/requests" className="inline-block font-medium text-indigo-700 hover:underline">
+          <Link to="/hod/requests" className="inline-block font-medium link">
             Review leave requests
           </Link>
         </div>
@@ -198,7 +198,7 @@ function PendingSwaps() {
   return (
     <p className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
       {count === 1 ? '1 swap is' : `${count} swaps are`} waiting for your approval.{' '}
-      <Link to="/hod/swaps" className="font-medium text-indigo-700 hover:underline">
+      <Link to="/hod/swaps" className="font-medium link">
         Review swap requests
       </Link>
     </p>

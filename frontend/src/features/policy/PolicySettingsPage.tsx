@@ -60,8 +60,8 @@ function PolicyEditor({ policy, savedVersion, onSaved, onReload }: {
     <form onSubmit={(e) => void onSubmit(e)} noValidate className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Examination policy</h1>
-          <p className="mt-1 text-sm text-slate-600">
+          <h1 className="text-2xl font-bold text-neutral-900 sm:text-3xl">Examination policy</h1>
+          <p className="mt-1 text-sm text-neutral-600">
             {policy.saved
               ? `Version ${policy.version}, saved by ${policy.createdByName ?? 'unknown'} on ${formatDateTime(policy.createdAt)}.`
               : 'No policy saved yet. These are the suggested defaults.'}{' '}
@@ -93,10 +93,10 @@ function VersionHistory() {
   if (!versions.data || versions.data.length === 0) return null
   return (
     <section>
-      <h2 className="text-lg font-semibold text-slate-900">Version history</h2>
-      <div className="mt-3 overflow-x-auto rounded-lg border border-slate-200 bg-white">
-        <table className="min-w-full divide-y divide-slate-200 text-sm">
-          <thead className="bg-slate-50 text-left text-slate-600">
+      <h2 className="text-lg font-semibold text-neutral-900">Version history</h2>
+      <div className="relative mt-3 overflow-x-auto rounded-lg border border-neutral-200 bg-white">
+        <table className="min-w-full divide-y divide-neutral-200 text-sm">
+          <thead className="bg-neutral-50 text-left text-neutral-600">
             <tr>
               <th scope="col" className="px-4 py-2 font-medium">Version</th>
               <th scope="col" className="px-4 py-2 font-medium">Saved</th>
@@ -104,14 +104,14 @@ function VersionHistory() {
               <th scope="col" className="px-4 py-2"><span className="sr-only">Actions</span></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-neutral-100">
             {versions.data.map((v) => (
               <tr key={v.version}>
-                <td className="px-4 py-2 font-medium text-slate-900">{v.version}</td>
-                <td className="px-4 py-2 text-slate-600">{formatDateTime(v.createdAt)}</td>
-                <td className="px-4 py-2 text-slate-600">{v.createdByName ?? '-'}</td>
+                <td className="px-4 py-2 font-medium text-neutral-900">{v.version}</td>
+                <td className="px-4 py-2 text-neutral-600">{formatDateTime(v.createdAt)}</td>
+                <td className="px-4 py-2 text-neutral-600">{v.createdByName ?? '-'}</td>
                 <td className="px-4 py-2 text-right">
-                  <Link to={`/admin/settings/policy/versions/${v.version}`} className="text-indigo-700 hover:underline">
+                  <Link to={`/admin/settings/policy/versions/${v.version}`} className="link">
                     View
                   </Link>
                 </td>
@@ -138,11 +138,11 @@ function ReadOnlyPolicy({ policy }: { policy: PolicyView }) {
   return (
     <div className="space-y-6">
       <div>
-        <Link to="/admin/settings/policy" className="text-sm text-indigo-700 hover:underline">
+        <Link to="/admin/settings/policy" className="text-sm link">
           ← Back to current policy
         </Link>
-        <h1 className="mt-2 text-2xl font-semibold text-slate-900">Policy version {policy.version}</h1>
-        <p className="mt-1 text-sm text-slate-600">
+        <h1 className="mt-2 text-2xl font-bold text-neutral-900 sm:text-3xl">Policy version {policy.version}</h1>
+        <p className="mt-1 text-sm text-neutral-600">
           Saved by {policy.createdByName ?? 'unknown'} on {formatDateTime(policy.createdAt)}. Past versions cannot be edited.
         </p>
       </div>

@@ -22,16 +22,16 @@ export function RequestsTable({
         <tr key={r.id}>
           {showFaculty && (
             <td className="px-4 py-2">
-              <span className="font-medium text-slate-900">{r.faculty.name}</span>{' '}
-              <span className="text-slate-500">{r.faculty.code} · {r.departmentCode}</span>
+              <span className="font-medium text-neutral-900">{r.faculty.name}</span>{' '}
+              <span className="text-neutral-500">{r.faculty.code} · {r.departmentCode}</span>
             </td>
           )}
-          <td className="px-4 py-2 text-slate-700">{describeWhen(r)}</td>
-          <td className="px-4 py-2 text-slate-600">{TYPE_LABEL[r.type]}</td>
-          <td className="px-4 py-2 text-slate-600">{r.reason ?? '-'}</td>
+          <td className="px-4 py-2 text-neutral-700">{describeWhen(r)}</td>
+          <td className="px-4 py-2 text-neutral-600">{TYPE_LABEL[r.type]}</td>
+          <td className="px-4 py-2 text-neutral-600">{r.reason ?? '-'}</td>
           <td className="px-4 py-2">
             <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLE[r.status]}`}>{r.status.toLowerCase()}</span>
-            {r.reviewNote && <p className="mt-1 text-xs text-slate-500">{r.reviewNote}{r.reviewedByName ? ` - ${r.reviewedByName}` : ''}</p>}
+            {r.reviewNote && <p className="mt-1 text-xs text-neutral-500">{r.reviewNote}{r.reviewedByName ? ` - ${r.reviewedByName}` : ''}</p>}
           </td>
           <td className="px-4 py-2">
             <div className="flex justify-end gap-3 whitespace-nowrap">
@@ -46,7 +46,7 @@ export function RequestsTable({
                 </>
               )}
               {onCancel && (canCancel?.(r) ?? true) && (r.status === 'PENDING' || r.status === 'APPROVED') && (
-                <button type="button" className="text-slate-700 hover:underline" onClick={() => onCancel(r)} aria-label={`Cancel ${describeWhen(r)}`}>
+                <button type="button" className="text-neutral-700 hover:underline" onClick={() => onCancel(r)} aria-label={`Cancel ${describeWhen(r)}`}>
                   Cancel
                 </button>
               )}

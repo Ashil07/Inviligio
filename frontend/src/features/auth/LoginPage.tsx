@@ -50,7 +50,7 @@ export function LoginPage() {
       footer={
         <>
           New college?{' '}
-          <Link to="/register" className="font-medium text-indigo-700 hover:underline">
+          <Link to="/register" className="font-medium link">
             Register your examination cell
           </Link>
         </>
@@ -65,7 +65,7 @@ export function LoginPage() {
             {colleges.map((c) => (
               <label
                 key={c.id}
-                className="flex cursor-pointer items-center gap-3 rounded-md border border-slate-200 p-3 hover:bg-slate-50 has-checked:border-indigo-500 has-checked:bg-indigo-50"
+                className="flex cursor-pointer items-center gap-3 rounded-md border border-neutral-200 p-3 hover:bg-neutral-50 has-checked:border-primary-500 has-checked:bg-primary-50"
               >
                 <input
                   type="radio"
@@ -73,11 +73,11 @@ export function LoginPage() {
                   value={c.id}
                   checked={collegeId === c.id}
                   onChange={() => setCollegeId(c.id)}
-                  className="accent-indigo-600"
+                  className="accent-primary-600"
                 />
                 <span className="text-sm">
-                  <span className="font-medium text-slate-900">{c.name}</span>
-                  <span className="ml-2 text-slate-500">{c.code}</span>
+                  <span className="font-medium text-neutral-900">{c.name}</span>
+                  <span className="ml-2 text-neutral-500">{c.code}</span>
                 </span>
               </label>
             ))}

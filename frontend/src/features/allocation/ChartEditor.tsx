@@ -95,24 +95,24 @@ function ChangeDuty({ chart, target, onDone }: { chart: DutyChart; target: Exclu
   return (
     <EditPanel title={title} onClose={onDone}>
       <form onSubmit={(ev) => void onSubmit(ev)} noValidate className="space-y-4">
-        <p className="text-sm text-slate-600">{where(target)}</p>
+        <p className="text-sm text-neutral-600">{where(target)}</p>
         {problem && <ErrorAlert>{problem}</ErrorAlert>}
 
         <div>
-          <h3 className="text-sm font-medium text-slate-700">Suggested</h3>
-          <p className="text-sm text-slate-500">Faculty who can take this duty without breaking a strict rule, best fit first.</p>
-          {options.isPending && <p className="mt-2 text-sm text-slate-500">Finding suitable faculty...</p>}
+          <h3 className="text-sm font-medium text-neutral-700">Suggested</h3>
+          <p className="text-sm text-neutral-500">Faculty who can take this duty without breaking a strict rule, best fit first.</p>
+          {options.isPending && <p className="mt-2 text-sm text-neutral-500">Finding suitable faculty...</p>}
           {options.error && <ErrorAlert>{toApiProblem(options.error).detail ?? 'Could not load suggestions.'}</ErrorAlert>}
           {options.data && options.data.alternatives.length === 0 && (
-            <p className="mt-2 text-sm text-slate-600">Nobody can take this duty without breaking a strict rule.</p>
+            <p className="mt-2 text-sm text-neutral-600">Nobody can take this duty without breaking a strict rule.</p>
           )}
           {options.data && options.data.alternatives.length > 0 && (
-            <ul className="mt-2 divide-y divide-slate-100 rounded-md border border-slate-200">
+            <ul className="mt-2 divide-y divide-neutral-100 rounded-md border border-neutral-200">
               {options.data.alternatives.map((a) => (
                 <li key={a.facultyId} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
                   <div>
-                    <span className="font-medium text-slate-900">{a.name}</span>{' '}
-                    <span className="text-slate-500">
+                    <span className="font-medium text-neutral-900">{a.name}</span>{' '}
+                    <span className="text-neutral-500">
                       ({a.code}, {a.departmentCode}) · {a.duties} dut{a.duties === 1 ? 'y' : 'ies'}
                     </span>
                     {a.warnings.length > 0 && <p className="text-xs text-amber-700">{a.warnings.join('; ')}</p>}
@@ -164,7 +164,7 @@ function ChangeDuty({ chart, target, onDone }: { chart: DutyChart; target: Exclu
 }
 
 function Verdict({ pending, error, data }: { pending: boolean; error: unknown; data?: { allowed: boolean; blocking: { code: string; message: string }[]; warnings: string[] } }) {
-  if (pending) return <p className="text-sm text-slate-500">Checking the rules...</p>
+  if (pending) return <p className="text-sm text-neutral-500">Checking the rules...</p>
   if (error) return <ErrorAlert>{toApiProblem(error).detail ?? 'Could not check this change.'}</ErrorAlert>
   if (!data) return null
   return (
@@ -222,7 +222,7 @@ function RemoveDuty({ periodId, target, onDone }: { periodId: string; target: Ex
   return (
     <EditPanel title={`Remove ${target.duty.facultyName}`} onClose={onDone}>
       <form onSubmit={(ev) => void onSubmit(ev)} noValidate className="space-y-4">
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-neutral-600">
           {target.duty.facultyName} will no longer be {where(target)}. The position becomes open until you fill it.
         </p>
         {problem && <ErrorAlert>{problem}</ErrorAlert>}

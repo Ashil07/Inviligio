@@ -39,7 +39,7 @@ function CollegeForm({ college }: { college: CollegeDetails }) {
   return (
     <form onSubmit={(e) => void onSubmit(e)} noValidate className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <h1 className="text-2xl font-semibold text-slate-900">College details</h1>
+        <h1 className="text-2xl font-bold text-neutral-900 sm:text-3xl">College details</h1>
         <Button type="submit" loading={update.isPending} disabled={!form.formState.isDirty}>
           Save changes
         </Button>

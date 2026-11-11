@@ -91,8 +91,8 @@ export const STATUS_STYLE: Record<SwapStatus, string> = {
   PENDING_HOD: 'bg-amber-100 text-amber-800',
   APPROVED: 'bg-emerald-50 text-emerald-700',
   REJECTED: 'bg-red-50 text-red-700',
-  CANCELLED: 'bg-slate-100 text-slate-600',
-  INVALIDATED: 'bg-slate-100 text-slate-600',
+  CANCELLED: 'bg-neutral-100 text-neutral-600',
+  INVALIDATED: 'bg-neutral-100 text-neutral-600',
 }
 
 /** "Mon, Mar 1, 2027 · FN 09:30-12:30 · H101 (chief)" */

@@ -14,7 +14,7 @@ export function TextField({ label, error, hint, className, ref, ...input }: Text
   const describedBy = error ? `${id}-error` : hint ? `${id}-hint` : undefined
   return (
     <div>
-      <label htmlFor={id} className="block text-sm font-medium text-slate-700">
+      <label htmlFor={id} className="block text-sm font-medium text-neutral-900">
         {label}
       </label>
       <input
@@ -22,8 +22,8 @@ export function TextField({ label, error, hint, className, ref, ...input }: Text
         ref={ref}
         aria-invalid={error ? true : undefined}
         aria-describedby={describedBy}
-        className={`mt-1 block w-full rounded-md border bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none focus:ring-2 ${
-          error ? 'border-red-400 focus:ring-red-200' : 'border-slate-300 focus:border-indigo-500 focus:ring-indigo-200'
+        className={`mt-1.5 block h-10 w-full rounded-md border bg-white px-3 text-[15px] text-neutral-900 outline-none transition-colors placeholder:text-neutral-400 focus:ring-1 sm:text-sm ${
+          error ? 'border-red-500 focus:border-red-600 focus:ring-red-600' : 'border-neutral-300 hover:border-neutral-400 focus:border-ink focus:ring-ink'
         } ${className ?? ''}`}
         {...input}
       />
@@ -32,7 +32,7 @@ export function TextField({ label, error, hint, className, ref, ...input }: Text
           {error}
         </p>
       ) : hint ? (
-        <p id={`${id}-hint`} className="mt-1 text-sm text-slate-500">
+        <p id={`${id}-hint`} className="mt-1 text-sm text-neutral-500">
           {hint}
         </p>
       ) : null}
@@ -50,13 +50,13 @@ export function Button({
 }: ButtonHTMLAttributes<HTMLButtonElement> & { loading?: boolean; variant?: 'primary' | 'secondary' }) {
   const styles =
     variant === 'primary'
-      ? 'bg-indigo-600 text-white hover:bg-indigo-700 disabled:bg-indigo-400'
-      : 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50'
+      ? 'bg-ink text-white hover:bg-accent disabled:bg-neutral-400'
+      : 'border border-neutral-300 bg-white text-neutral-900 hover:border-ink disabled:opacity-50'
   return (
     <button
       {...props}
       disabled={disabled || loading}
-      className={`inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium shadow-sm transition-colors ${styles} ${className ?? ''}`}
+      className={`inline-flex h-10 items-center justify-center gap-2 rounded-md px-4 text-sm font-medium transition-colors disabled:cursor-not-allowed ${styles} ${className ?? ''}`}
     >
       {loading ? 'Please wait...' : children}
     </button>
@@ -65,7 +65,7 @@ export function Button({
 
 export function ErrorAlert({ children }: { children: ReactNode }) {
   return (
-    <div role="alert" className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+    <div role="alert" className="flex items-start gap-2 border-l-2 border-red-600 bg-red-50 px-3 py-2.5 text-sm text-red-900">
       <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden />
       <div>{children}</div>
     </div>

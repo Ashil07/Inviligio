@@ -55,7 +55,7 @@ export function AcceptInvitePage() {
             'This invitation link is invalid or has expired. Ask your examination cell for a new one.'}
         </ErrorAlert>
         <p className="mt-4 text-sm">
-          <Link to="/login" className="font-medium text-indigo-700 hover:underline">Go to sign in</Link>
+          <Link to="/login" className="font-medium link">Go to sign in</Link>
         </p>
       </AuthCard>
     )
@@ -100,7 +100,7 @@ function AcceptForm({ token, invitation }: { token: string; invitation: Invitati
         <TextField label="Email" value={invitation.email} readOnly disabled />
         {invitation.existingAccount ? (
           <>
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-neutral-600">
               You already have an Invigilo account with this email. Enter its password to add {invitation.collegeCode} to it.
             </p>
             <TextField label="Password" type="password" autoComplete="current-password" error={e.password?.message} {...form.register('password')} />

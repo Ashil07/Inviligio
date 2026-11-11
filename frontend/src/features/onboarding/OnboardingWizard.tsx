@@ -38,9 +38,9 @@ export function OnboardingWizard() {
   const error = college.error ?? policy.error
   if (error) {
     return (
-      <main className="mx-auto max-w-3xl px-4 py-8">
+      <div className="max-w-3xl">
         <ErrorAlert>{toApiProblem(error).detail ?? 'Could not load the college setup.'}</ErrorAlert>
-      </main>
+      </div>
     )
   }
   if (!college.data || !policy.data) return <FullPageSpinner label="Loading college setup" />
@@ -103,9 +103,9 @@ function Wizard({ college, policy }: { college: CollegeDetails; policy: PolicyVi
   const busy = updateCollege.isPending || savePolicy.isPending || complete.isPending
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-8">
-      <h1 className="text-2xl font-semibold text-slate-900">Set up your college</h1>
-      <p className="mt-1 text-slate-600">
+    <div className="max-w-3xl">
+      <h1 className="text-2xl font-bold text-neutral-900 sm:text-3xl">Set up your college</h1>
+      <p className="mt-1 text-neutral-600">
         These rules decide how invigilation duties are allocated. Every setting can be changed later; each change is
         kept as a new policy version.
       </p>
@@ -116,7 +116,7 @@ function Wizard({ college, policy }: { college: CollegeDetails; policy: PolicyVi
             key={s.title}
             aria-current={i === step ? 'step' : undefined}
             className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${
-              i === step ? 'bg-indigo-600 text-white' : i < step ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-100 text-slate-500'
+              i === step ? 'bg-primary-600 text-white' : i < step ? 'bg-primary-50 text-primary-700' : 'bg-neutral-100 text-neutral-500'
             }`}
           >
             {i < step && <Check className="size-3" aria-hidden />}
@@ -150,7 +150,7 @@ function Wizard({ college, policy }: { college: CollegeDetails; policy: PolicyVi
           </Button>
         )}
       </div>
-    </main>
+    </div>
   )
 }
 
@@ -159,8 +159,8 @@ function Review({ settings }: { settings: PolicySettings }) {
     <Section title="Review" description="Check the rules below, then save them as policy version 1.">
       {describePolicy(settings).map((g) => (
         <div key={g.group}>
-          <h3 className="text-sm font-semibold text-slate-800">{g.group}</h3>
-          <ul className="mt-1 list-disc space-y-0.5 pl-5 text-sm text-slate-600">
+          <h3 className="text-sm font-semibold text-neutral-800">{g.group}</h3>
+          <ul className="mt-1 list-disc space-y-0.5 pl-5 text-sm text-neutral-600">
             {g.items.map((item) => (
               <li key={item}>{item}</li>
             ))}

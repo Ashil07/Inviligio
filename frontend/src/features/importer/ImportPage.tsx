@@ -94,7 +94,7 @@ export function ImportPage() {
           </div>
         </div>
         <div>
-          <label htmlFor="import-file" className="block text-sm font-medium text-slate-700">CSV file (UTF-8, up to 5000 rows)</label>
+          <label htmlFor="import-file" className="block text-sm font-medium text-neutral-700">CSV file (UTF-8, up to 5000 rows)</label>
           <input
             id="import-file"
             type="file"
@@ -138,9 +138,9 @@ export function ImportPage() {
           <Table head={['Line', 'Column', 'Problem']}>
             {report.errors.map((e, i) => (
               <tr key={i}>
-                <td className="px-4 py-2 text-slate-700">{e.line || '-'}</td>
-                <td className="px-4 py-2 font-mono text-xs text-slate-700">{e.column ?? '-'}</td>
-                <td className="px-4 py-2 text-slate-700">{e.message}</td>
+                <td className="px-4 py-2 text-neutral-700">{e.line || '-'}</td>
+                <td className="px-4 py-2 font-mono text-xs text-neutral-700">{e.column ?? '-'}</td>
+                <td className="px-4 py-2 text-neutral-700">{e.message}</td>
               </tr>
             ))}
           </Table>

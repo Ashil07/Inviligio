@@ -165,7 +165,7 @@ should use composite FKs to `subject (college_id, id)` and `faculty (college_id,
   review with department scope, exam-cell recording, cancellation, per-session overview,
   `unavailableFacultyIds` for the engine), `AvailabilityController`.
 - Frontend: `/faculty/availability`, `/hod/requests`, `/admin/availability` (requests, record
-  leave, per-session overview); `AreaLayout` navigation for the HOD and faculty areas.
+  leave, per-session overview); navigation for the HOD and faculty areas (since replaced by the app shell, see "UI redesign").
 
 **Verified**
 - Backend: 128 tests (12 new: auto-approval, session requests, policy limits, overlaps, past dates,
@@ -631,3 +631,32 @@ Merged before this: pull requests #1 (leave-form fix) and #2 (M9); CI passed on 
   `invigilo` in 6.2 s (PostgreSQL 17.11); `/api/v1/system/status` reports the database UP at version 10.
   The local demo (`LocalDevApplication`) still uses its embedded database and ignores `DB_URL`.
 
+
+## UI redesign: Swiss style, grouped navigation, mobile, landing page  (2026-11-11)
+
+**Built** (frontend only, no API or migration changes)
+- Design tokens in `frontend/src/index.css`: Inter (grotesque) typeface, black ink on white, neutral
+  greys, one red accent (`accent`), hairline rules instead of shadows, near-square corners. Colour
+  classes were renamed across the app: `indigo-*` → `primary-*` (the ink scale: buttons, focus,
+  selected states) and `slate-*` → `neutral-*`. Utilities: `link` (underlined text link) and
+  `eyebrow` (small uppercase label). Status colours (red, amber, emerald) are unchanged.
+- App shell (`app/AppLayout.tsx`): a fixed sidebar on wide screens with the college, a role switcher
+  ("Areas"), the area's grouped navigation and sign-out. Below `lg` the sidebar becomes a drawer opened
+  from a top bar (closes on navigation, Escape or the backdrop). Navigation lives in `app/navigation.ts`.
+  The old per-area tab bars (`AdminLayout`, `AreaLayout`) are gone; pages get padding from the shell.
+- Exam-cell navigation grouped: Overview · Examinations (exam periods, availability, swap requests) ·
+  Insights (fairness, reports, remuneration) · Directory (faculty, departments, subjects, halls, bulk
+  import) · College (Settings). College details and policy share one Settings entry with tabs
+  (`app/SettingsLayout.tsx`).
+- Exam-cell overview now lists recent exam periods and shortcuts next to the college and policy summary.
+- Landing page at `/` for visitors (`features/landing/LandingPage.tsx`); signed-in users are sent to
+  their area (`HomeOrLanding`). Sign-in, registration and invitation pages use a split brand layout.
+  New favicon/brand mark (`components/Brand.tsx`).
+- Mobile: every page fits a 375 px screen; tables scroll sideways inside their frame (`Table` is
+  `relative` so hidden header labels cannot widen the page).
+
+**Verified**
+- Frontend: 110 tests (7 new in `app/AppLayout.test.tsx`: grouped navigation, onboarding links,
+  settings tabs, drawer open/close, landing page, redirect from `/`), lint and build clean.
+- Browser: all 22 signed-in pages checked at 375 px for sideways overflow (none); desktop and phone
+  screenshots of the overview, exam periods, allocation, drawer, landing and sign-in pages.

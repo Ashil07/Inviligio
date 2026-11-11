@@ -34,10 +34,10 @@ export function MyAvailabilityPage() {
 
   if (!session.facultyId) {
     return (
-      <main className="mx-auto max-w-4xl px-4 py-8">
+      <div className="max-w-4xl">
         <PageHeader title="My availability" />
-        <p className="mt-4 text-sm text-slate-600">Your login is not linked to a faculty record, so there is nothing to request.</p>
-      </main>
+        <p className="mt-4 text-sm text-neutral-600">Your login is not linked to a faculty record, so there is nothing to request.</p>
+      </div>
     )
   }
   const rules = policy.data?.settings.availability
@@ -53,7 +53,7 @@ export function MyAvailabilityPage() {
   }
 
   return (
-    <main className="mx-auto max-w-4xl space-y-6 px-4 py-8">
+    <div className="max-w-4xl space-y-6">
       <PageHeader
         title="My availability"
         description="Approved leave and unavailability are always respected when duties are allocated."
@@ -80,7 +80,7 @@ export function MyAvailabilityPage() {
       {problem && <ErrorAlert>{problem}</ErrorAlert>}
       {mine.error && <ErrorAlert>{toApiProblem(mine.error).detail ?? 'Could not load your requests.'}</ErrorAlert>}
       <section>
-        <h2 className="mb-3 text-lg font-semibold text-slate-900">My requests</h2>
+        <h2 className="mb-3 text-lg font-semibold text-neutral-900">My requests</h2>
         <RequestsTable
           requests={mine.data ?? []}
           showFaculty={false}
@@ -88,7 +88,7 @@ export function MyAvailabilityPage() {
           canCancel={(r) => r.toDate >= today()}
         />
       </section>
-    </main>
+    </div>
   )
 }
 
@@ -133,12 +133,12 @@ export function DepartmentRequestsPage() {
   const list = useAvailabilityList(status)
   const { onReview, problem } = useReviewer()
   return (
-    <main className="mx-auto max-w-6xl space-y-6 px-4 py-8">
+    <div className="space-y-6">
       <PageHeader title="Leave requests" description="Requests from faculty of your department. Approved requests are respected by allocation." />
       <StatusFilter value={status} onChange={setStatus} />
       {(problem || list.error) && <ErrorAlert>{problem ?? toApiProblem(list.error).detail ?? 'Could not load requests.'}</ErrorAlert>}
       <RequestsTable requests={list.data ?? []} showFaculty onReview={(r, a) => void onReview(r, a)} />
-    </main>
+    </div>
   )
 }
 
@@ -165,7 +165,7 @@ export function AdminAvailabilityPage() {
       <PageHeader title="Availability and leave" description="Approved leave and unavailability are hard rules for allocation. Pending requests are only warnings." />
       <RecordLeave />
       <section className="space-y-4">
-        <h2 className="text-lg font-semibold text-slate-900">Requests</h2>
+        <h2 className="text-lg font-semibold text-neutral-900">Requests</h2>
         <StatusFilter value={status} onChange={setStatus} />
         {(problem || cancelProblem || list.error) && (
           <ErrorAlert>{problem ?? cancelProblem ?? toApiProblem(list.error).detail ?? 'Could not load requests.'}</ErrorAlert>
@@ -231,10 +231,10 @@ function PeriodOverview() {
         <Table head={['Session', 'Unavailable', 'Pending']} empty={overview.data.length === 0 && 'This period has no sessions.'}>
           {overview.data.map((row) => (
             <tr key={row.session.id}>
-              <td className="whitespace-nowrap px-4 py-2 text-slate-700">
+              <td className="whitespace-nowrap px-4 py-2 text-neutral-700">
                 {formatDate(row.session.date)} {row.session.label} {hhmm(row.session.startTime)}
               </td>
-              <td className="px-4 py-2 text-slate-700">
+              <td className="px-4 py-2 text-neutral-700">
                 {row.unavailable.length === 0 ? '-' : row.unavailable.map((u) => `${u.faculty.name}${u.wholeDay ? '' : ' (session)'}`).join(', ')}
               </td>
               <td className="px-4 py-2 text-amber-800">{row.pending.map((p) => p.name).join(', ') || '-'}</td>

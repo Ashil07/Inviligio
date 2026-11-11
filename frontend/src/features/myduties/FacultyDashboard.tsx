@@ -24,7 +24,7 @@ export function FacultyDashboard() {
     const p = toApiProblem(duties.error)
     if (p.code === 'NOT_A_FACULTY_MEMBER') {
       return (
-        <p className="mt-6 flex items-start gap-2 rounded-md border border-slate-200 bg-white p-4 text-sm text-slate-700">
+        <p className="mt-6 flex items-start gap-2 rounded-md border border-neutral-200 bg-white p-4 text-sm text-neutral-700">
           <Info className="mt-0.5 size-4 shrink-0" aria-hidden />
           Your login is not linked to a faculty record, so there are no duties to show. Ask the examination cell if this is wrong.
         </p>
@@ -51,25 +51,25 @@ export function FacultyDashboard() {
           <Button variant="secondary" loading={download.isPending} disabled={upcoming.length + past.length === 0} onClick={() => download.mutate()}>
             <Download className="mr-2 size-4" aria-hidden /> Download calendar
           </Button>
-          <span className="text-xs text-slate-500">An .ics file for Google Calendar, Outlook or your phone.</span>
+          <span className="text-xs text-neutral-500">An .ics file for Google Calendar, Outlook or your phone.</span>
         </div>
       </div>
       {download.error && <ErrorAlert>{toApiProblem(download.error).detail ?? 'Could not download your calendar.'}</ErrorAlert>}
 
       {next ? (
-        <section aria-label="Next duty" className="rounded-lg border border-indigo-200 bg-indigo-50 p-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-indigo-700">Next duty</p>
-          <p className="mt-1 text-lg font-semibold text-slate-900">
+        <section aria-label="Next duty" className="rounded-lg border border-primary-200 bg-primary-50 p-4">
+          <p className="text-xs font-medium uppercase tracking-wide text-primary-700">Next duty</p>
+          <p className="mt-1 text-lg font-semibold text-neutral-900">
             {formatDate(next.date)} · {next.sessionLabel} {hhmm(next.startTime)}-{hhmm(next.endTime)}
           </p>
-          <p className="text-sm text-slate-700">
+          <p className="text-sm text-neutral-700">
             {roleName(next)} in {place(next)}
           </p>
-          <p className="text-sm text-slate-600">{next.colleagues.length > 0 ? `With ${next.colleagues.join(', ')}` : 'No other invigilator in this hall.'}</p>
-          <p className="mt-1 text-xs text-slate-500">{next.periodName}</p>
+          <p className="text-sm text-neutral-600">{next.colleagues.length > 0 ? `With ${next.colleagues.join(', ')}` : 'No other invigilator in this hall.'}</p>
+          <p className="mt-1 text-xs text-neutral-500">{next.periodName}</p>
         </section>
       ) : (
-        <p className="rounded-md border border-slate-200 bg-white p-4 text-sm text-slate-600">
+        <p className="rounded-md border border-neutral-200 bg-white p-4 text-sm text-neutral-600">
           {past.length > 0 ? 'You have no upcoming duties.' : 'No duties yet. They appear here once the examination cell publishes a duty chart.'}
         </p>
       )}
@@ -90,9 +90,9 @@ export function FacultyDashboard() {
 
 function Stat({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-3">
-      <dt className="text-xs text-slate-500">{label}</dt>
-      <dd className="text-lg font-semibold text-slate-900">{value}</dd>
+    <div className="rounded-lg border border-neutral-200 bg-white p-3">
+      <dt className="text-xs text-neutral-500">{label}</dt>
+      <dd className="text-lg font-semibold text-neutral-900">{value}</dd>
     </div>
   )
 }
@@ -102,17 +102,17 @@ function DutyTable({ duties, empty, swappable = false }: { duties: MyDuty[]; emp
     <Table head={['Date', 'Session', 'Hall', 'Role', 'With', ...(swappable ? [''] : [])]} empty={duties.length === 0 && empty}>
       {duties.map((d) => (
         <tr key={d.assignmentId}>
-          <td className="px-4 py-2 text-slate-800">{formatDate(d.date)}</td>
-          <td className="px-4 py-2 text-slate-600">
+          <td className="px-4 py-2 text-neutral-800">{formatDate(d.date)}</td>
+          <td className="px-4 py-2 text-neutral-600">
             {d.sessionLabel} {hhmm(d.startTime)}-{hhmm(d.endTime)}
           </td>
-          <td className="px-4 py-2 text-slate-800">{place(d)}</td>
-          <td className="px-4 py-2 text-slate-600">{roleName(d)}</td>
-          <td className="px-4 py-2 text-slate-600">{d.colleagues.join(', ') || '-'}</td>
+          <td className="px-4 py-2 text-neutral-800">{place(d)}</td>
+          <td className="px-4 py-2 text-neutral-600">{roleName(d)}</td>
+          <td className="px-4 py-2 text-neutral-600">{d.colleagues.join(', ') || '-'}</td>
           {swappable && (
             <td className="px-4 py-2 text-right">
               {d.status === 'ASSIGNED' && (
-                <Link to={`/faculty/swaps?duty=${d.assignmentId}`} className="text-sm font-medium text-indigo-700 hover:underline" aria-label={`Swap the duty on ${formatDate(d.date)} ${d.sessionLabel}`}>
+                <Link to={`/faculty/swaps?duty=${d.assignmentId}`} className="text-sm font-medium link" aria-label={`Swap the duty on ${formatDate(d.date)} ${d.sessionLabel}`}>
                   Swap
                 </Link>
               )}
@@ -150,19 +150,19 @@ function MonthCalendar({ duties, today, start }: { duties: MyDuty[]; today: stri
   return (
     <Section title="Calendar">
       <div className="flex items-center justify-between">
-        <button type="button" className="rounded p-1 text-slate-600 hover:bg-slate-100" aria-label="Previous month" onClick={() => move(-1)}>
+        <button type="button" className="rounded p-1 text-neutral-600 hover:bg-neutral-100" aria-label="Previous month" onClick={() => move(-1)}>
           <ChevronLeft className="size-5" aria-hidden />
         </button>
-        <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+        <h3 className="flex items-center gap-2 text-sm font-semibold text-neutral-900">
           <CalendarDays className="size-4" aria-hidden /> {title}
         </h3>
-        <button type="button" className="rounded p-1 text-slate-600 hover:bg-slate-100" aria-label="Next month" onClick={() => move(1)}>
+        <button type="button" className="rounded p-1 text-neutral-600 hover:bg-neutral-100" aria-label="Next month" onClick={() => move(1)}>
           <ChevronRight className="size-5" aria-hidden />
         </button>
       </div>
       <div role="grid" aria-label={`Duties in ${title}`} className="mt-3 grid grid-cols-7 gap-1 text-xs">
         {WEEKDAYS.map((w) => (
-          <div key={w} role="columnheader" className="py-1 text-center font-medium text-slate-500">
+          <div key={w} role="columnheader" className="py-1 text-center font-medium text-neutral-500">
             {w}
           </div>
         ))}
@@ -175,11 +175,11 @@ function MonthCalendar({ duties, today, start }: { duties: MyDuty[]; today: stri
               key={date}
               role="gridcell"
               aria-label={mine.length ? `${date}: ${mine.map((d) => `${d.sessionLabel} ${d.hallCode}`).join(', ')}` : date}
-              className={`min-h-14 rounded border p-1 ${mine.length ? 'border-indigo-300 bg-indigo-50' : 'border-slate-100 bg-white'} ${date === today ? 'ring-2 ring-indigo-400' : ''}`}
+              className={`min-h-14 rounded border p-1 ${mine.length ? 'border-primary-300 bg-primary-50' : 'border-neutral-100 bg-white'} ${date === today ? 'ring-2 ring-primary-400' : ''}`}
             >
-              <div className={`text-right ${date === today ? 'font-semibold text-indigo-700' : 'text-slate-500'}`}>{day}</div>
+              <div className={`text-right ${date === today ? 'font-semibold text-primary-700' : 'text-neutral-500'}`}>{day}</div>
               {mine.map((d) => (
-                <div key={d.assignmentId} className="truncate font-medium text-indigo-800">
+                <div key={d.assignmentId} className="truncate font-medium text-primary-800">
                   {d.sessionLabel} {d.hallCode}
                 </div>
               ))}
@@ -196,13 +196,13 @@ function LeaveRequests() {
   const pending = requests.data?.filter((r) => r.status === 'PENDING').length ?? 0
   return (
     <Section title="Leave and availability">
-      <p className="text-sm text-slate-600">
+      <p className="text-sm text-neutral-600">
         {requests.isPending
           ? 'Loading your requests...'
           : pending > 0
             ? `${pending} request${pending === 1 ? ' is' : 's are'} waiting for a decision.`
             : 'No requests waiting for a decision.'}{' '}
-        <Link to="/faculty/availability" className="font-medium text-indigo-700 hover:underline">
+        <Link to="/faculty/availability" className="font-medium link">
           Manage leave requests
         </Link>
       </p>
@@ -217,7 +217,7 @@ function SwapRequests() {
   return (
     <p className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
       {waiting === 1 ? 'A colleague has' : `${waiting} colleagues have`} asked you to swap a duty.{' '}
-      <Link to="/faculty/swaps" className="font-medium text-indigo-700 hover:underline">
+      <Link to="/faculty/swaps" className="font-medium link">
         Answer swap requests
       </Link>
     </p>

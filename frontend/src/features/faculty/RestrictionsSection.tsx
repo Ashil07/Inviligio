@@ -71,14 +71,14 @@ export function RestrictionsSection({ faculty }: { faculty: FacultyDetail }) {
     <Section title="Restrictions" description="Strict, per-person rules. Allocation never breaks them, whatever the college policy says.">
       {problem && <ErrorAlert>{problem}</ErrorAlert>}
       {faculty.restrictions.length === 0 ? (
-        <p className="text-sm text-slate-500">No restrictions.</p>
+        <p className="text-sm text-neutral-500">No restrictions.</p>
       ) : (
-        <ul className="divide-y divide-slate-100 rounded-md border border-slate-200">
+        <ul className="divide-y divide-neutral-100 rounded-md border border-neutral-200">
           {faculty.restrictions.map((r) => (
             <li key={r.id} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
               <span>
-                <span className="font-medium text-slate-800">{describeRestriction(r)}</span>
-                {r.reason && <span className="text-slate-500"> - {r.reason}</span>}
+                <span className="font-medium text-neutral-800">{describeRestriction(r)}</span>
+                {r.reason && <span className="text-neutral-500"> - {r.reason}</span>}
               </span>
               <button type="button" className="text-red-700 hover:underline" onClick={() => void handleRemove(r)}>
                 Remove

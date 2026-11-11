@@ -50,11 +50,11 @@ export function SubstitutePanel({ periodId, target, onDone }: { periodId: string
   return (
     <div ref={panel}>
       <EditPanel title={`Substitute for ${duty.facultyName}`} onClose={() => onDone('')}>
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-neutral-600">
           {duty.facultyName} cannot do the duty as {where}. Choose who takes it over; only people who keep every strict rule are listed, best
           first. The change applies at once and the substitute sees it on their dashboard.
         </p>
-        {options.isPending && <p className="mt-3 text-sm text-slate-500">Finding substitutes...</p>}
+        {options.isPending && <p className="mt-3 text-sm text-neutral-500">Finding substitutes...</p>}
         {options.error && (
           <div className="mt-3">
             <ErrorAlert>{toApiProblem(options.error).detail ?? 'Could not load substitutes.'}</ErrorAlert>
@@ -73,15 +73,15 @@ export function SubstitutePanel({ periodId, target, onDone }: { periodId: string
               <p className="text-sm text-red-700">Nobody can take this duty without breaking a strict rule.</p>
             ) : (
               <fieldset>
-                <legend className="text-sm font-medium text-slate-700">Substitute</legend>
-                <ul className="mt-2 divide-y divide-slate-100 rounded-md border border-slate-200">
+                <legend className="text-sm font-medium text-neutral-700">Substitute</legend>
+                <ul className="mt-2 divide-y divide-neutral-100 rounded-md border border-neutral-200">
                   {options.data.candidates.map((c, i) => (
                     <li key={c.facultyId}>
-                      <label className={`flex cursor-pointer items-start gap-3 px-3 py-2 text-sm ${facultyId === c.facultyId ? 'bg-indigo-50' : ''}`}>
+                      <label className={`flex cursor-pointer items-start gap-3 px-3 py-2 text-sm ${facultyId === c.facultyId ? 'bg-primary-50' : ''}`}>
                         <input type="radio" value={c.facultyId} className="mt-1" {...form.register('facultyId')} />
                         <span>
-                          <span className="font-medium text-slate-900">{c.name}</span>{' '}
-                          <span className="text-slate-500">
+                          <span className="font-medium text-neutral-900">{c.name}</span>{' '}
+                          <span className="text-neutral-500">
                             ({c.code}, {c.departmentCode}) · {c.duties} {c.duties === 1 ? 'duty' : 'duties'} in this period
                             {i === 0 && ' · best fit'}
                           </span>
@@ -95,7 +95,7 @@ export function SubstitutePanel({ periodId, target, onDone }: { periodId: string
               </fieldset>
             )}
             {excluded && (
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-neutral-500">
                 Of {excluded.totalFaculty} faculty:{' '}
                 {Object.entries(excluded.eliminated).map(([r, n]) => `${n} ${REASON_LABEL[r] ?? r}`).join(', ') || 'none excluded'}.
               </p>

@@ -16,15 +16,15 @@ export function CheckboxField({
         ref={ref}
         type="checkbox"
         aria-describedby={description ? `${id}-desc` : undefined}
-        className="mt-1 size-4 shrink-0 accent-indigo-600 disabled:opacity-60"
+        className="mt-1 size-4 shrink-0 accent-ink disabled:opacity-60"
         {...input}
       />
       <div>
-        <label htmlFor={id} className="text-sm font-medium text-slate-800">
+        <label htmlFor={id} className="text-sm font-medium text-neutral-800">
           {label}
         </label>
         {description && (
-          <p id={`${id}-desc`} className="text-sm text-slate-500">
+          <p id={`${id}-desc`} className="text-sm text-neutral-500">
             {description}
           </p>
         )}
@@ -55,15 +55,15 @@ export function SelectField({
   const id = useId()
   return (
     <div>
-      <label htmlFor={id} className="block text-sm font-medium text-slate-700">
+      <label htmlFor={id} className="block text-sm font-medium text-neutral-900">
         {label}
       </label>
-      {description && <p className="text-sm text-slate-500">{description}</p>}
+      {description && <p className="text-sm text-neutral-500">{description}</p>}
       <select
         id={id}
         ref={ref}
         aria-invalid={error ? true : undefined}
-        className="mt-1 block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 disabled:bg-slate-50 disabled:text-slate-500"
+        className="mt-1.5 block h-10 w-full rounded-md border border-neutral-300 bg-white px-3 text-[15px] text-neutral-900 outline-none transition-colors hover:border-neutral-400 focus:border-ink focus:ring-1 focus:ring-ink disabled:bg-neutral-50 disabled:text-neutral-500 sm:text-sm"
         {...select}
       >
         {options.map((o) => (
@@ -80,9 +80,9 @@ export function SelectField({
 /** A titled group of related settings. */
 export function Section({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-      <h2 className="text-base font-semibold text-slate-900">{title}</h2>
-      {description && <p className="mt-1 text-sm text-slate-600">{description}</p>}
+    <section className="border-t border-ink pt-4">
+      <h2 className="text-lg font-semibold text-neutral-900">{title}</h2>
+      {description && <p className="mt-1 text-sm text-neutral-600">{description}</p>}
       <div className="mt-4 space-y-5">{children}</div>
     </section>
   )
@@ -90,7 +90,7 @@ export function Section({ title, description, children }: { title: string; descr
 
 export function SuccessNotice({ children }: { children: ReactNode }) {
   return (
-    <div role="status" className="flex items-start gap-2 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
+    <div role="status" className="flex items-start gap-2 border-l-2 border-emerald-600 bg-emerald-50 px-3 py-2.5 text-sm text-emerald-900">
       <CheckCircle2 className="mt-0.5 size-4 shrink-0" aria-hidden />
       <div>{children}</div>
     </div>

@@ -24,7 +24,7 @@ export function PeriodsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Examinations"
+        title="Exam periods"
         description="An examination period groups the sessions of one exam season. Inside a period you add sessions, the exams in each session, and the halls students sit in."
         actions={<Button onClick={() => setCreating(true)}>New examination period</Button>}
       />
@@ -34,11 +34,11 @@ export function PeriodsPage() {
         {periods.data?.map((p) => (
           <tr key={p.id}>
             <td className="px-4 py-2">
-              <Link to={`/admin/exams/${p.id}`} className="font-medium text-indigo-700 hover:underline">{p.name}</Link>
+              <Link to={`/admin/exams/${p.id}`} className="font-medium link">{p.name}</Link>
             </td>
-            <td className="px-4 py-2 text-slate-600">{formatDate(p.startDate)} - {formatDate(p.endDate)}</td>
-            <td className="px-4 py-2 text-slate-600">{p.sessionCount}</td>
-            <td className="px-4 py-2 text-slate-600">{p.status.toLowerCase()}</td>
+            <td className="px-4 py-2 text-neutral-600">{formatDate(p.startDate)} - {formatDate(p.endDate)}</td>
+            <td className="px-4 py-2 text-neutral-600">{p.sessionCount}</td>
+            <td className="px-4 py-2 text-neutral-600">{p.status.toLowerCase()}</td>
           </tr>
         ))}
       </Table>

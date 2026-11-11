@@ -60,13 +60,13 @@ export function FacultySwapsPage() {
   const policy = usePolicy()
   const enabled = policy.data?.settings.swaps.swapsEnabled ?? true
   return (
-    <main className="mx-auto max-w-6xl space-y-6 px-4 py-8">
+    <div className="space-y-6">
       <PageHeader
         title="Duty swaps"
         description="Hand a duty to a colleague or trade one with them. Every swap is checked against the college's allocation rules before it happens."
       />
       {!enabled ? (
-        <p className="flex items-start gap-2 rounded-md border border-slate-200 bg-white p-4 text-sm text-slate-700">
+        <p className="flex items-start gap-2 rounded-md border border-neutral-200 bg-white p-4 text-sm text-neutral-700">
           <Info className="mt-0.5 size-4 shrink-0" aria-hidden />
           Your college does not allow duty swaps. Ask the examination cell if a duty has to change.
         </p>
@@ -74,7 +74,7 @@ export function FacultySwapsPage() {
         <RequestSwap />
       )}
       <ReceivedAndSent />
-    </main>
+    </div>
   )
 }
 
@@ -136,9 +136,9 @@ function RequestSwap() {
         </SuccessNotice>
       )}
       {duties.isPending ? (
-        <p className="text-sm text-slate-600">Loading your duties...</p>
+        <p className="text-sm text-neutral-600">Loading your duties...</p>
       ) : mine.length === 0 ? (
-        <p className="text-sm text-slate-600">You have no upcoming duties in a published chart.</p>
+        <p className="text-sm text-neutral-600">You have no upcoming duties in a published chart.</p>
       ) : (
         <form className="grid gap-4 sm:grid-cols-2" onSubmit={form.handleSubmit(onSubmit)} noValidate>
           <SelectField
@@ -198,7 +198,7 @@ function RequestSwap() {
 
 function Verdict({ loading, check, error }: { loading: boolean; check?: { allowed: boolean; blocking: { code: string; message: string }[]; warnings: string[] }; error: unknown }) {
   if (error) return <ErrorAlert>{toApiProblem(error).detail ?? 'Could not check this swap.'}</ErrorAlert>
-  if (loading || !check) return <p className="text-sm text-slate-500">Checking the rules...</p>
+  if (loading || !check) return <p className="text-sm text-neutral-500">Checking the rules...</p>
   return (
     <div className="space-y-2 text-sm" role="status">
       {check.allowed ? (
@@ -246,7 +246,7 @@ function ReceivedAndSent() {
     }
   }
 
-  if (swaps.isPending) return <p className="text-sm text-slate-600">Loading swap requests...</p>
+  if (swaps.isPending) return <p className="text-sm text-neutral-600">Loading swap requests...</p>
   if (swaps.error) {
     const p = toApiProblem(swaps.error)
     return p.code === 'NOT_A_FACULTY_MEMBER' ? null : <ErrorAlert>{p.detail ?? 'Could not load swap requests.'}</ErrorAlert>
@@ -259,14 +259,14 @@ function ReceivedAndSent() {
       {result && <SuccessNotice>{result}</SuccessNotice>}
       <Section title="Waiting for your answer">
         {waiting.length === 0 ? (
-          <p className="text-sm text-slate-600">Nobody has asked you to swap.</p>
+          <p className="text-sm text-neutral-600">Nobody has asked you to swap.</p>
         ) : (
           <ul className="space-y-3">
             {waiting.map((s) => (
-              <li key={s.id} className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-slate-800">
+              <li key={s.id} className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-neutral-800">
                 <p className="font-medium">{s.requester.name} asks you to swap</p>
                 <p className="mt-1">{swapSentence(s)}</p>
-                {s.reason && <p className="mt-1 text-slate-600">Reason: {s.reason}</p>}
+                {s.reason && <p className="mt-1 text-neutral-600">Reason: {s.reason}</p>}
                 <div className="mt-2 flex gap-2">
                   <Button onClick={() => void run(s, 'accept')} loading={act.isPending && act.variables?.swap.id === s.id && act.variables.action === 'accept'}>
                     Accept
@@ -301,10 +301,10 @@ function SwapTable({ swaps, empty, action }: { swaps: Swap[]; empty: string; act
     <Table head={['Asked', 'Swap', 'Status', ...(action ? [''] : [])]} empty={swaps.length === 0 && empty}>
       {swaps.map((s) => (
         <tr key={s.id}>
-          <td className="whitespace-nowrap px-4 py-2 text-slate-600">{formatDateTime(s.createdAt)}</td>
-          <td className="px-4 py-2 text-slate-800">
+          <td className="whitespace-nowrap px-4 py-2 text-neutral-600">{formatDateTime(s.createdAt)}</td>
+          <td className="px-4 py-2 text-neutral-800">
             {swapSentence(s)}
-            {outcome(s) && <span className="block text-xs text-slate-500">{outcome(s)}</span>}
+            {outcome(s) && <span className="block text-xs text-neutral-500">{outcome(s)}</span>}
           </td>
           <td className="px-4 py-2">
             <StatusBadge status={s.status} />
@@ -355,7 +355,7 @@ export function SwapApprovalsPage({ description }: { description: string }) {
   }
 
   return (
-    <main className="mx-auto max-w-6xl space-y-6 px-4 py-8">
+    <div className="space-y-6">
       <PageHeader title="Swap requests" description={description} />
       <div className="w-64">
         <SelectField label="Show" value={status} onChange={(e) => setStatus(e.target.value)} options={STATUS_FILTER} />
@@ -365,15 +365,15 @@ export function SwapApprovalsPage({ description }: { description: string }) {
       <Table head={['Asked', 'Who', 'Swap', 'Reason', 'Status', '']} empty={!list.isPending && (list.data ?? []).length === 0 && 'No swap requests here.'}>
         {(list.data ?? []).map((s) => (
           <tr key={s.id}>
-            <td className="whitespace-nowrap px-4 py-2 text-slate-600">{formatDateTime(s.createdAt)}</td>
-            <td className="px-4 py-2 text-slate-800">
+            <td className="whitespace-nowrap px-4 py-2 text-neutral-600">{formatDateTime(s.createdAt)}</td>
+            <td className="px-4 py-2 text-neutral-800">
               {s.requester.name} ({s.requester.departmentCode}) → {s.target.name} ({s.target.departmentCode})
             </td>
-            <td className="px-4 py-2 text-slate-800">
+            <td className="px-4 py-2 text-neutral-800">
               {swapSentence(s)}
-              {outcome(s) && <span className="block text-xs text-slate-500">{outcome(s)}</span>}
+              {outcome(s) && <span className="block text-xs text-neutral-500">{outcome(s)}</span>}
             </td>
-            <td className="px-4 py-2 text-slate-600">{s.reason ?? '-'}</td>
+            <td className="px-4 py-2 text-neutral-600">{s.reason ?? '-'}</td>
             <td className="px-4 py-2">
               <StatusBadge status={s.status} />
             </td>
@@ -392,7 +392,7 @@ export function SwapApprovalsPage({ description }: { description: string }) {
           </tr>
         ))}
       </Table>
-    </main>
+    </div>
   )
 }
 

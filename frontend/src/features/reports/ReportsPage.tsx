@@ -86,23 +86,23 @@ export function ReportsPage() {
   }
 
   return (
-    <main className="mx-auto max-w-6xl space-y-6 px-4 py-8">
+    <div className="space-y-6">
       <PageHeader title="Reports" description="Download the duty chart, workload or fairness figures of an exam period to print, share or open in Excel." />
       <form className="space-y-6" onSubmit={form.handleSubmit(onSubmit)} noValidate>
         <fieldset>
-          <legend className="text-sm font-medium text-slate-700">Report</legend>
+          <legend className="text-sm font-medium text-neutral-700">Report</legend>
           <div className="mt-2 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {TYPES.map((t) => (
               <label
                 key={t.value}
-                className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 text-sm ${type === t.value ? 'border-indigo-400 bg-indigo-50' : 'border-slate-200 bg-white'}`}
+                className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 text-sm ${type === t.value ? 'border-primary-400 bg-primary-50' : 'border-neutral-200 bg-white'}`}
               >
                 <input type="radio" value={t.value} className="mt-1" {...form.register('type')} />
                 <span>
-                  <span className="flex items-center gap-1.5 font-medium text-slate-900">
+                  <span className="flex items-center gap-1.5 font-medium text-neutral-900">
                     <t.icon className="size-4" aria-hidden /> {t.label}
                   </span>
-                  <span className="text-slate-600">{t.description}</span>
+                  <span className="text-neutral-600">{t.description}</span>
                 </span>
               </label>
             ))}
@@ -161,6 +161,6 @@ export function ReportsPage() {
           <Download className="mr-2 size-4" aria-hidden /> Download report
         </Button>
       </form>
-    </main>
+    </div>
   )
 }

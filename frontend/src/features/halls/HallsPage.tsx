@@ -59,12 +59,12 @@ export function HallsPage() {
       <Table head={['Code', 'Name', 'Building', 'Capacity', 'Min. invigilators', 'Type', 'Status', '']} empty={halls.data?.length === 0 && 'No halls yet.'}>
         {halls.data?.map((h) => (
           <tr key={h.id}>
-            <td className="px-4 py-2 font-medium text-slate-900">{h.code}</td>
-            <td className="px-4 py-2 text-slate-700">{h.name}</td>
-            <td className="px-4 py-2 text-slate-600">{h.building ?? '-'}</td>
-            <td className="px-4 py-2 text-slate-600">{h.capacity}</td>
-            <td className="px-4 py-2 text-slate-600">{h.minInvigilators}</td>
-            <td className="px-4 py-2 text-slate-600">{h.lab ? 'Lab' : 'Hall'}</td>
+            <td className="px-4 py-2 font-medium text-neutral-900">{h.code}</td>
+            <td className="px-4 py-2 text-neutral-700">{h.name}</td>
+            <td className="px-4 py-2 text-neutral-600">{h.building ?? '-'}</td>
+            <td className="px-4 py-2 text-neutral-600">{h.capacity}</td>
+            <td className="px-4 py-2 text-neutral-600">{h.minInvigilators}</td>
+            <td className="px-4 py-2 text-neutral-600">{h.lab ? 'Lab' : 'Hall'}</td>
             <td className="px-4 py-2"><StatusBadge active={h.active} /></td>
             <td className="px-4 py-2"><RowActions label={h.code} onEdit={() => setEditing(h)} onDelete={() => void handleDelete(h)} /></td>
           </tr>

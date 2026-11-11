@@ -34,10 +34,10 @@ export function FacultyListPage() {
         description="Everyone who can be given invigilation duties. Their subjects, department and restrictions decide where they may be placed."
         actions={
           <>
-            <Link to="/admin/import" className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50">
+            <Link to="/admin/import" className="rounded-md border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-700 shadow-sm hover:bg-neutral-50">
               Import CSV
             </Link>
-            <Link to="/admin/faculty/new" className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700">
+            <Link to="/admin/faculty/new" className="rounded-md bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary-700">
               Add faculty
             </Link>
           </>
@@ -68,23 +68,23 @@ export function FacultyListPage() {
       >
         {data?.items.map((f) => (
           <tr key={f.id}>
-            <td className="px-4 py-2 font-medium text-slate-900">{f.employeeCode}</td>
+            <td className="px-4 py-2 font-medium text-neutral-900">{f.employeeCode}</td>
             <td className="px-4 py-2">
-              <Link to={`/admin/faculty/${f.id}`} className="text-indigo-700 hover:underline">
+              <Link to={`/admin/faculty/${f.id}`} className="link">
                 {f.fullName}
               </Link>
             </td>
-            <td className="px-4 py-2 text-slate-600">{f.department.code}</td>
-            <td className="px-4 py-2 text-slate-600">{f.designation ?? '-'}</td>
-            <td className="px-4 py-2 text-slate-600">{EMPLOYMENT_LABEL[f.employmentType as EmploymentType]}</td>
-            <td className="px-4 py-2 text-slate-600">{f.subjectCount}</td>
-            <td className="px-4 py-2 text-slate-600">{f.chiefEligible ? 'Yes' : '-'}</td>
+            <td className="px-4 py-2 text-neutral-600">{f.department.code}</td>
+            <td className="px-4 py-2 text-neutral-600">{f.designation ?? '-'}</td>
+            <td className="px-4 py-2 text-neutral-600">{EMPLOYMENT_LABEL[f.employmentType as EmploymentType]}</td>
+            <td className="px-4 py-2 text-neutral-600">{f.subjectCount}</td>
+            <td className="px-4 py-2 text-neutral-600">{f.chiefEligible ? 'Yes' : '-'}</td>
             <td className="px-4 py-2"><StatusBadge active={f.active} /></td>
           </tr>
         ))}
       </Table>
       {data && data.total > PAGE_SIZE && (
-        <div className="flex items-center justify-between text-sm text-slate-600">
+        <div className="flex items-center justify-between text-sm text-neutral-600">
           <span>
             {data.page * data.size + 1}-{last} of {data.total}
           </span>

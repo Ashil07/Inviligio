@@ -62,7 +62,7 @@ export function RegisterCollegePage() {
       footer={
         <>
           Already registered?{' '}
-          <Link to="/login" className="font-medium text-indigo-700 hover:underline">
+          <Link to="/login" className="font-medium link">
             Sign in
           </Link>
         </>

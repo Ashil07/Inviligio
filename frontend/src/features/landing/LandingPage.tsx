@@ -35,7 +35,7 @@ const FEATURES = [
   },
   {
     title: 'Balanced workload',
-    text: 'Duties are spread evenly across faculty. The fairness view shows who is under or over the average, by department and by person.',
+    text: 'Duties are spread evenly across faculty, so nobody carries more than their share and every chart shows how even the spread is.',
   },
   {
     title: 'Swaps and substitutes',
@@ -46,8 +46,8 @@ const FEATURES = [
     text: 'Duty chart, workload and fairness reports as PDF to print, Excel to work with, or CSV for other systems.',
   },
   {
-    title: 'Remuneration',
-    text: 'Set a pay rate per duty, mark who was absent, and get the pay sheet for the whole period.',
+    title: 'Leave and availability',
+    text: 'Faculty ask for leave before the exams. Once it is approved, the generator never gives them a duty in that time.',
   },
   {
     title: 'Every change on record',

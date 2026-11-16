@@ -17,7 +17,7 @@ describe('app shell', () => {
     renderRoutes(routes, { path: '/admin/exams', auth: makeAuth(activeCollege) })
 
     const nav = await screen.findByRole('navigation', { name: 'Examination cell' })
-    for (const group of ['Examinations', 'Insights', 'Directory', 'College']) {
+    for (const group of ['Examinations', 'Directory', 'College']) {
       expect(within(nav).getByText(group)).toBeInTheDocument()
     }
     expect(within(nav).getByRole('link', { name: 'Exam periods' })).toHaveAttribute('aria-current', 'page')
@@ -25,6 +25,9 @@ describe('app shell', () => {
     // College details and policy share one "Settings" entry.
     expect(within(nav).getByRole('link', { name: 'Settings' })).toHaveAttribute('href', '/admin/settings/college')
     expect(within(nav).queryByRole('link', { name: 'Policy' })).not.toBeInTheDocument()
+    // Hidden from the menu for now.
+    expect(within(nav).queryByRole('link', { name: 'Fairness' })).not.toBeInTheDocument()
+    expect(within(nav).queryByRole('link', { name: 'Remuneration' })).not.toBeInTheDocument()
   })
 
   it('shows only setup links while the college is onboarding', async () => {

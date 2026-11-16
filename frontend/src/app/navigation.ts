@@ -7,10 +7,8 @@ import {
   ClipboardList,
   DoorOpen,
   FileText,
-  IndianRupee,
   Inbox,
   LayoutGrid,
-  Scale,
   Settings,
   Upload,
   Users,
@@ -64,16 +62,11 @@ const ADMIN: NavGroup[] = [
       { to: '/admin/exams', label: 'Exam periods', icon: CalendarDays },
       { to: '/admin/availability', label: 'Availability', icon: CalendarOff },
       { to: '/admin/swaps', label: 'Swap requests', icon: ArrowLeftRight },
-    ],
-  },
-  {
-    label: 'Insights',
-    items: [
-      { to: '/admin/analytics', label: 'Fairness', icon: Scale },
       { to: '/admin/reports', label: 'Reports', icon: FileText },
-      { to: '/admin/remuneration', label: 'Remuneration', icon: IndianRupee },
     ],
   },
+  // Fairness (/admin/analytics) and Remuneration (/admin/remuneration) are hidden from the menu for now;
+  // their pages still work by URL.
   {
     label: 'Directory',
     items: [
